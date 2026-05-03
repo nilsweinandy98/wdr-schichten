@@ -434,8 +434,8 @@
 
   <div class="card daten-card">
     <div class="sec-label">Daten &amp; Sicherung</div>
-    <p class="daten-p">Nach dem Entsperren liegen die Schichten <strong>verschlüsselt</strong> unter <code class="mono">wdr-v5-vault</code> im <code class="mono">localStorage</code> dieses Browsers. Das Passwort bleibt nur bei dir; ohne Passwort sind die Daten nicht lesbar. Es gibt <strong>keinen Cloud-Server</strong> — Sync musst du selbst über Backups machen.</p>
-    <p class="daten-p"><strong>Hinweis:</strong> Schutz gilt für diese Browser-Installation. Wer Zugriff auf dein Gerät und das Passwort hat, kann die Daten entsperren. Bei file:// kann Verschlüsselung ausfallen — Seite per lokalem Server oder HTTPS öffnen.</p>
+    <p class="daten-p">Nach dem Entsperren liegen die Schichten <strong>verschlüsselt</strong> unter <code class="mono">wdr-v5-vault</code> im <code class="mono">localStorage</code> <strong>nur dieses Browsers/Geräts</strong>. Jedes Gerät hat damit einen eigenen Tresor-Container — das Passwort solltest du überall <strong>gleich</strong> wählen, sonst sind lokale Daten und der Prüf-Fingerprint im Repo nicht vergleichbar.</p>
+    <p class="daten-p"><strong>Hinweis:</strong> Schutz gilt für diese Installation. Wer Zugriff auf Gerät und Passwort hat, kann entsperren. Bei file:// kann Verschlüsselung ausfallen — Seite per lokalem Server oder HTTPS öffnen.</p>
     <p class="daten-p"><strong>Backup (.json):</strong> unverschlüsselte Kopie zum Archivieren; sicher aufbewahren. Import:</p>
     <div class="imp-mode-row">
       <label><input type="radio" name="imp-mode" value="merge" checked/> Zusammenführen (nur neue IDs)</label>
@@ -449,13 +449,19 @@
 
   <div class="card gh-card">
     <div class="sec-label">GitHub Sync</div>
-    <p class="gh-note">Die Schichten werden im Repo als <strong>normales JSON</strong> gespeichert — nur für <strong>private Repos</strong> gedacht (öffentlich wäre alles lesbar). Wer API-Zugriff haben soll, kennt das <strong>zentrale Tresor-Passwort</strong> und legt sich einen eigenen <strong>PAT</strong> mit Zugriff auf dieses Repo an; das Passwort selbst landet <strong>nicht</strong> im Repo. Zusätzlich wird optional eine kleine Datei <code class="mono">wdr-access.json</code> (SHA-256-Fingerprint des Tresor-Passworts) mitgeschrieben, damit ihr Passwort-Wirrungen merkt — ohne echte Server-Prüfung (die GitHub-API verlässt sich auf den Token). PAT nur lokal — <strong>nie ins Repo committen</strong>.</p>
+    <p class="gh-note">Schichten liegen im Repo als <strong>Klartext-JSON</strong> — nur für <strong>private Repos</strong>. <strong>GitHub-Token (PAT)</strong> und alle Felder unten werden <strong>nur in diesem Browser</strong> gespeichert: auf einem zweiten Gerät musst du den PAT <strong>erneut</strong> eintragen und „Einstellungen speichern“ (oder URL-Feld unten nutzen). Das <strong>Tresor-Passwort</strong> sollte auf allen Geräten <strong>dieselbe Zeichenkette</strong> sein. Im Repo liegen zusätzlich <code class="mono">wdr-connection.json</code> (Repo/Pfad/Branch, ohne Geheimnisse) und <code class="mono">wdr-access.json</code> (nur SHA-256 des Tresor-Passworts zum Abgleich). PAT <strong>nie</strong> ins Repo committen.</p>
     <div class="gh-grid">
       <div><label for="gh-owner">Owner / Organisation</label><input id="gh-owner" type="text" placeholder="nilsweinandy98" autocomplete="off"/></div>
       <div><label for="gh-repo">Repo-Name</label><input id="gh-repo" type="text" placeholder="wdr-schichten" autocomplete="off"/></div>
       <div><label for="gh-path">Dateipfad im Repo</label><input id="gh-path" type="text" placeholder="data/schichten.json" autocomplete="off"/></div>
       <div><label for="gh-branch">Branch</label><input id="gh-branch" type="text" placeholder="main" autocomplete="off"/></div>
       <div><label for="gh-token">GitHub Token (PAT)</label><input id="gh-token" type="password" placeholder="" autocomplete="off"/></div>
+      <div style="grid-column:1/-1;">
+        <label for="gh-repo-url" style="font-size:10px;font-weight:700;color:var(--light);letter-spacing:0.5px;text-transform:uppercase;display:block;margin-bottom:4px">Zweites Gerät: Repo-URL (optional)</label>
+        <input id="gh-repo-url" type="text" placeholder="https://github.com/Owner/Repo" autocomplete="off"/>
+        <button type="button" class="btn-outline" style="margin-top:10px;width:auto;padding:10px 14px" onclick="githubApplyRepoUrlAndPullConnection()">URL übernehmen &amp; Verbindungsdatei laden</button>
+        <p style="font-size:12px;color:var(--muted);margin:8px 0 0;line-height:1.4">Voraussetzung: PAT oben einfügen und einmal speichern. Dann URL einfügen — die App lädt <code class="mono">wdr-connection.json</code> aus dem Repo und trägt Owner, Repo, Pfad und Branch ein.</p>
+      </div>
     </div>
     <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);margin-bottom:10px;cursor:pointer">
       <input type="checkbox" id="gh-autosync" checked/> Beim Öffnen von GitHub laden &amp; nach jeder Änderung sofort hochladen (empfohlen für mehrere Geräte)
@@ -490,7 +496,7 @@
 
 <script>
 /** Versionsdatum dieser HTML-Datei (TT.MM.JJ); bei Änderungen anpassen */
-const APP_BUILD_STAMP = "03.05.26 · gh-plain-json";
+const APP_BUILD_STAMP = "03.05.26 · gh-connection-url";
 
 const SCHICHTEN = [
   { typ: "ZePrA 1",      beginn: "06:30", ende: "14:42" },
@@ -873,6 +879,82 @@ function githubFingerprintSidecarPath(mainPath) {
   return parts.join("/");
 }
 
+/** Gleicher Ordner wie Schichten-JSON — nur Meta, kein PAT (für zweites Gerät). */
+function githubConnectionSidecarPath(mainPath) {
+  const parts = mainPath.split("/").filter(Boolean);
+  if (!parts.length) return "wdr-connection.json";
+  parts[parts.length - 1] = "wdr-connection.json";
+  return parts.join("/");
+}
+
+function parseGithubRepoUrl(raw) {
+  const t = (raw || "").trim();
+  if (!t) return null;
+  const m = t.match(/github\.com[/:]([^/]+)\/([^/#\s?]+)/i);
+  if (m) return { owner: m[1], repo: m[2].replace(/\.git$/i, "") };
+  const m2 = t.match(/^([^/]+)\/([^/]+)$/);
+  if (m2) return { owner: m2[1], repo: m2[2].replace(/\.git$/i, "") };
+  return null;
+}
+
+async function githubTryFetchConnectionMeta(owner, repo, branchGuess, schichtenPathGuess) {
+  const branches = Array.from(
+    new Set([(branchGuess || "").trim() || "main", "main", "master"].filter(Boolean))
+  );
+  const u = (schichtenPathGuess || "").trim() || "data/schichten.json";
+  const rels = [
+    githubConnectionSidecarPath(u),
+    "data/wdr-connection.json",
+    "wdr-connection.json",
+  ];
+  const tried = new Set();
+  for (const br of branches) {
+    for (const rel of rels) {
+      const key = br + "::" + rel;
+      if (tried.has(key)) continue;
+      tried.add(key);
+      try {
+        const conn = await githubGetFileJson({ owner, repo, branch: br }, rel);
+        if (conn && conn.format === "wdr-connection" && conn.owner && conn.repo) return conn;
+      } catch (_) {}
+    }
+  }
+  return null;
+}
+
+async function githubApplyRepoUrlAndPullConnection() {
+  if (!getGhToken()) {
+    showToast("Zuerst PAT einfügen und „Einstellungen speichern“.", "err");
+    return;
+  }
+  const urlEl = document.getElementById("gh-repo-url");
+  const parsed = parseGithubRepoUrl(urlEl && urlEl.value);
+  if (!parsed) {
+    showToast("URL nicht erkannt — z. B. https://github.com/Owner/Repo oder Owner/Repo.", "err");
+    return;
+  }
+  const ownerEl = document.getElementById("gh-owner");
+  const repoEl = document.getElementById("gh-repo");
+  const pathEl = document.getElementById("gh-path");
+  const branchEl = document.getElementById("gh-branch");
+  if (ownerEl) ownerEl.value = parsed.owner;
+  if (repoEl) repoEl.value = parsed.repo;
+  const branchGuess = (branchEl && branchEl.value.trim()) || "main";
+  const pathGuess = (pathEl && pathEl.value.trim()) || "data/schichten.json";
+  const conn = await githubTryFetchConnectionMeta(parsed.owner, parsed.repo, branchGuess, pathGuess);
+  if (!conn) {
+    showToast("Keine wdr-connection.json gefunden — Branch prüfen oder Pfad wie auf Gerät 1 eintragen.", "err");
+    saveGithubSettingsFromUI();
+    return;
+  }
+  if (ownerEl) ownerEl.value = conn.owner || parsed.owner;
+  if (repoEl) repoEl.value = conn.repo || parsed.repo;
+  if (pathEl && conn.path) pathEl.value = conn.path;
+  if (branchEl && conn.branch) branchEl.value = conn.branch;
+  saveGithubSettingsFromUI();
+  showToast("Verbindungsdaten aus Repo übernommen ✓", "ok");
+}
+
 async function sha256HexUtf8(text) {
   if (!text || !cryptoSubtleOk()) return "";
   const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
@@ -890,7 +972,7 @@ async function githubMaybeWarnFingerprintMismatch(cfg) {
     const loc = await sha256HexUtf8(pw);
     if (loc && acc.vaultPwSha256 !== loc) {
       showToast(
-        "Hinweis: „wdr-access.json“ passt nicht zu deinem Tresor-Passwort — das zentrale Kennwort mit dem Team abstimmen.",
+        "Tresor-Passwort ≠ Repo-Fingerprint: auf allen Geräten dasselbe Tresor-Passwort nutzen. PAT ist nur lokal — auf jedem Gerät neu eintragen. „wdr-access.json“ entspricht dem Passwort desjenigen, der zuletzt hochgeladen hat.",
         "err"
       );
     }
@@ -1072,6 +1154,22 @@ async function pushSchichtenToGithub(schichtenArr) {
     schichten: schichtenArr,
   };
   await githubPutUtf8File(cfg, cfg.path, JSON.stringify(payload, null, 2), `schichten: sync ${todayISO()}`);
+
+  const connObj = {
+    format: "wdr-connection",
+    v: 1,
+    owner: cfg.owner,
+    repo: cfg.repo,
+    path: cfg.path,
+    branch: cfg.branch,
+    savedISO: todayISO(),
+  };
+  await githubPutUtf8File(
+    cfg,
+    githubConnectionSidecarPath(cfg.path),
+    JSON.stringify(connObj, null, 2),
+    `wdr-connection: meta ${todayISO()}`
+  );
 
   const pw = getDeviceVaultPasswordRaw();
   if (pw && cryptoSubtleOk()) {
