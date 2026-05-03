@@ -367,7 +367,6 @@
     <div id="vault-subtle-warn" class="vault-warn">Verschlüsselung nicht verfügbar (z. B. bei file://). Bitte die Seite über einen lokalen Server oder HTTPS öffnen.</div>
     <p id="vault-msg" class="vault-msg">…</p>
     <input type="password" id="vault-pw1" autocomplete="current-password" placeholder="Passwort"/>
-    <input type="password" id="vault-pw2" autocomplete="new-password" placeholder="Passwort wiederholen" style="display:none"/>
     <button type="button" class="btn-primary" id="vault-submit">…</button>
   </div>
 </div>
@@ -449,7 +448,7 @@
 
   <div class="card gh-card">
     <div class="sec-label">GitHub</div>
-    <p class="gh-note">Schichten liegen im Repo als <strong>Klartext-JSON</strong> — nur für <strong>private Repos</strong>. Owner, Repo, Branch, Pfad und <strong>einmal der Token</strong> stehen <strong>oben im Skript</strong> unter <code class="mono">GITHUB_REMOTE</code> — hier keine Felder zum Ausfüllen, kein PAT im Browser-Speicher. Token und diese HTML-Datei <strong>nie</strong> öffentlich teilen.</p>
+    <p class="gh-note"><strong>Laden ohne Token:</strong> Jeder mit dem Tresor-Passwort kann Schichten per Knopf oder Auto-Sync holen, wenn das Repo <strong>öffentlich</strong> ist (GitHub liefert die Datei anonym). <strong>Hochladen</strong> geht nur mit optionalem <code class="mono">GITHUB_REMOTE.token</code> im Skript. Daten sind Klartext im Repo — sensible Repos nicht öffentlich machen, wenn das stört.</p>
     <p id="gh-remote-summary" class="gh-note" style="margin-top:8px"></p>
     <div class="imp-mode-row" style="margin-bottom:14px">
       <span style="font-weight:700;color:var(--text)">„Von GitHub laden“:</span>
@@ -480,7 +479,7 @@
 
 <script>
 /** Versionsdatum dieser HTML-Datei (TT.MM.JJ); bei Änderungen anpassen */
-const APP_BUILD_STAMP = "03.05.26 · gh-inline-config";
+const APP_BUILD_STAMP = "03.05.26 · gh-read-anon";
 
 const SCHICHTEN = [
   { typ: "ZePrA 1",      beginn: "06:30", ende: "14:42" },
@@ -523,9 +522,9 @@ const TEMPLATE_URL = "https://raw.githubusercontent.com/nilsweinandy98/wdr-schic
 const CENTRAL_VAULT_PASSWORD = "nilsweinandywdr";
 
 /**
- * GitHub — einmalig hier ausfüllen (Owner, Repo, Branch, Pfad, Token).
- * Kein Formular auf der Seite, kein localStorage für Repo oder PAT.
- * Repo privat halten; diese Datei mit Token nicht öffentlich committen.
+ * GitHub — Owner/Repo/Branch/Pfad für alle Pflicht.
+ * Ohne token: Lesen über öffentliche Raw-URL (Repo muss öffentlich sein).
+ * Mit token: zusätzlich Upload + Lesen bei privatem Repo.
  */
 const GITHUB_REMOTE = {
   owner: "nilsweinandy98",
@@ -534,7 +533,7 @@ const GITHUB_REMOTE = {
   schichtenPath: "data/schichten.json",
   token: "",
 };
-/** Beim Öffnen von GitHub laden und nach Änderungen hochladen */
+/** Beim Öffnen von GitHub laden; Upload nur wenn token gesetzt */
 const GITHUB_AUTOSYNC = true;
 
 const STATUS = {
@@ -587,35 +586,42 @@ function renderGithubSyncStatus() {
   const cfg = getGhConfigParsed();
   if (!cfg.autosyncPush) {
     el.classList.add("gh-sync-muted");
-    el.textContent = "Auto-Sync ist aus — es wird nichts automatisch zu GitHub geschickt.";
+    el.textContent = "Auto-Sync ist aus — nichts wird automatisch von GitHub geladen oder hochgeladen.";
     return;
   }
-  if (!githubSyncFullyConfigured()) {
+  if (!githubRemoteReadOk()) {
     el.classList.add("gh-sync-muted");
-    el.textContent =
-      "GitHub-Sync: Oben im Skript bei GITHUB_REMOTE.owner / repo / branch / schichtenPath und token ausfüllen.";
+    el.textContent = "GitHub: GITHUB_REMOTE.owner, repo, branch und schichtenPath prüfen.";
     return;
   }
-  if (ghSyncPending) {
+  const canPush = githubPushConfigured();
+  if (ghSyncPending && canPush) {
     el.classList.add("gh-sync-pending");
     el.textContent = "⏳ Änderungen werden zu GitHub hochgeladen …";
     return;
   }
   const m = readGhSyncMeta();
   const parts = [];
-  if (m.pushISO) parts.push("Letzter Upload: " + m.pushISO);
   if (m.pullISO) parts.push("Letzter Bezug von GitHub: " + m.pullISO);
+  if (canPush && m.pushISO) parts.push("Letzter Upload: " + m.pushISO);
   if (m.lastErr) {
     el.classList.add("gh-sync-err");
     parts.push("Letzter Fehler: " + m.lastErr);
-    el.textContent = parts.join(" · ");
+    el.textContent = parts.length ? parts.join(" · ") : "Letzter Fehler: " + m.lastErr;
     return;
   }
   el.classList.add("gh-sync-ok");
-  el.textContent =
-    parts.length > 0
-      ? parts.join(" · ")
-      : "Bereit — der nächste Upload erfolgt automatisch nach einer Änderung.";
+  if (canPush) {
+    el.textContent =
+      parts.length > 0
+        ? parts.join(" · ")
+        : "Bereit — beim Öffnen laden und nach Änderungen zu GitHub hochladen.";
+  } else {
+    el.textContent =
+      parts.length > 0
+        ? parts.join(" · ") + " — ohne Token kein Upload zum Repo."
+        : "Beim Öffnen wird von GitHub geladen — ohne Token kein automatischer Upload (öffentliches Repo vorausgesetzt).";
+  }
 }
 
 function vaultSessionClear() {}
@@ -739,9 +745,52 @@ function mergeSchichtenGithubUpsert(existing, incoming) {
   return { merged: [...byId.values()], added, updated };
 }
 
-function githubSyncFullyConfigured() {
+/** Lesen: Owner, Repo, Branch, Dateipfad (ohne Token wenn Repo öffentlich). */
+function githubRemoteReadOk() {
   const cfg = getGhConfigParsed();
-  return !!(cfg.owner && cfg.repo && getGhToken());
+  return !!(cfg.owner && cfg.repo && cfg.path && cfg.branch);
+}
+
+/** Schreiben / privates Lesen: wie Lesen plus Token. */
+function githubPushConfigured() {
+  return githubRemoteReadOk() && !!getGhToken();
+}
+
+/** Öffentliches Repo — keine Auth (Inkognito, jedes Gerät). */
+async function githubGetFileJsonRaw(cfg) {
+  const rel = (cfg.path || "").replace(/^\/+/, "");
+  const segs = rel.split("/").filter(Boolean).map(encodeURIComponent).join("/");
+  const url =
+    "https://raw.githubusercontent.com/" +
+    encodeURIComponent(cfg.owner) +
+    "/" +
+    encodeURIComponent(cfg.repo) +
+    "/" +
+    encodeURIComponent(cfg.branch) +
+    "/" +
+    segs;
+  const res = await fetch(url, { cache: "no-store" });
+  if (res.status === 404) {
+    throw new Error(
+      "Schichten-Datei nicht gefunden (404). Repo öffentlich schalten oder Branch/Pfad prüfen — ohne Token sind nur öffentliche Repos lesbar."
+    );
+  }
+  if (!res.ok) {
+    throw new Error(
+      "GitHub lesen fehlgeschlagen (HTTP " +
+        res.status +
+        "). Privates Repo braucht GITHUB_REMOTE.token im Skript."
+    );
+  }
+  let txt = await res.text();
+  txt = txt.replace(/^\uFEFF/, "").trim();
+  let parsed;
+  try {
+    parsed = JSON.parse(txt);
+  } catch (_) {
+    throw new Error("Datei ist kein gültiges JSON.");
+  }
+  return parsed;
 }
 
 /** JSON aus Repo (Klartext). */
@@ -789,8 +838,10 @@ async function githubPutUtf8File(cfg, relativePath, utf8Text, commitMsg) {
 /** Remote-Schichtenliste (Klartext-JSON). */
 async function fetchGithubSchichtenArray() {
   const cfg = getGhConfigParsed();
-  if (!cfg.owner || !cfg.repo) throw new Error("Owner und Repo ausfüllen.");
-  const data = await githubGetFileJson(cfg, cfg.path);
+  if (!cfg.owner || !cfg.repo) throw new Error("Owner und Repo in GITHUB_REMOTE prüfen.");
+  const data = getGhToken()
+    ? await githubGetFileJson(cfg, cfg.path)
+    : await githubGetFileJsonRaw(cfg);
   if (data && data.format === "schichten-plain" && Array.isArray(data.schichten)) {
     return normalizeSchichtenArray(data.schichten);
   }
@@ -810,14 +861,16 @@ async function fetchGithubSchichtenArray() {
  */
 async function githubStartupPullReplaceIfEnabled() {
   const cfg = getGhConfigParsed();
-  if (!cfg.autosyncPush || !githubSyncFullyConfigured()) return false;
+  if (!cfg.autosyncPush || !githubRemoteReadOk()) return false;
   try {
     state.schichten = await fetchGithubSchichtenArray();
     writeGhSyncMeta({ pullISO: ghSyncTimestampDE(), lastErr: null });
     renderGithubSyncStatus();
     return true;
-  } catch (_) {
-    /* Offline / Datei fehlt noch — keinen Fehler in der Statuszeile festhalten */
+  } catch (e) {
+    const msg = e && e.message ? e.message : String(e);
+    writeGhSyncMeta({ lastErr: msg });
+    renderGithubSyncStatus();
     return false;
   }
 }
@@ -825,7 +878,7 @@ async function githubStartupPullReplaceIfEnabled() {
 let ghPushChain = Promise.resolve();
 
 function queueGithubPushSerialized() {
-  if (!getGhConfigParsed().autosyncPush || !githubSyncFullyConfigured()) {
+  if (!getGhConfigParsed().autosyncPush || !githubPushConfigured()) {
     renderGithubSyncStatus();
     return;
   }
@@ -889,10 +942,13 @@ function renderGithubRemoteSummary() {
   const el = document.getElementById("gh-remote-summary");
   if (!el) return;
   const cfg = getGhConfigParsed();
-  const ok = githubSyncFullyConfigured();
-  el.textContent = ok
-    ? `Verbunden: ${cfg.owner}/${cfg.repo} · Branch ${cfg.branch} · ${cfg.path}`
-    : "GitHub: Oben im Skript bei GITHUB_REMOTE Owner, Repo, Branch, schichtenPath und token eintragen — sonst kein Sync.";
+  if (!githubRemoteReadOk()) {
+    el.textContent = "GitHub: GITHUB_REMOTE.owner, repo, branch und schichtenPath prüfen.";
+    return;
+  }
+  el.textContent = githubPushConfigured()
+    ? `Lesen + Schreiben: ${cfg.owner}/${cfg.repo} · ${cfg.branch} · ${cfg.path}`
+    : `Lesen ohne Login (öffentliches Repo): ${cfg.owner}/${cfg.repo} · ${cfg.branch} · ${cfg.path} — optional token zum Hochladen.`;
 }
 
 function strToB64Utf8(str) {
@@ -968,6 +1024,13 @@ async function pushSchichtenToGithub(schichtenArr) {
 }
 
 async function pushToGithub() {
+  if (!githubPushConfigured()) {
+    showToast(
+      "Hochladen braucht GITHUB_REMOTE.token im Skript — oder Backup unter „Daten“ exportieren.",
+      "err"
+    );
+    return;
+  }
   ghSyncPending = true;
   renderGithubSyncStatus();
   try {
@@ -1026,13 +1089,10 @@ function lockVault() {
   sessionVaultKey = null;
   vaultSaltB64 = null;
   const p1 = document.getElementById("vault-pw1");
-  const p2 = document.getElementById("vault-pw2");
   const msg = document.getElementById("vault-msg");
   const btn = document.getElementById("vault-submit");
   const btnLock = document.getElementById("btn-lock-vault");
   if (p1) p1.value = "";
-  if (p2) p2.value = "";
-  if (p2) p2.style.display = "none";
   if (msg) msg.textContent = "Passwort eingeben, um den Tresor zu entsperren.";
   if (btn) {
     btn.style.display = "block";
@@ -1091,12 +1151,14 @@ async function unlockVaultFromUI() {
 async function setupVaultFromUI() {
   if (!cryptoSubtleOk()) return;
   const p1 = document.getElementById("vault-pw1").value;
-  const p2 = document.getElementById("vault-pw2").value;
-  if (p1 !== CENTRAL_VAULT_PASSWORD) {
-    vaultToast("Nur das zentrale Passwort ist möglich — siehe festen Wert in dieser App.", true);
+  if (!p1) {
+    vaultToast("Passwort eingeben", true);
     return;
   }
-  if (p1 !== p2) { vaultToast("Passwörter stimmen nicht überein.", true); return; }
+  if (p1 !== CENTRAL_VAULT_PASSWORD) {
+    vaultToast("Passwort falsch.", true);
+    return;
+  }
   let initial = [];
   try {
     const leg = localStorage.getItem(STORAGE_KEY);
@@ -1122,7 +1184,6 @@ function initVaultGate() {
   if (wSub) wSub.style.display = subtleOk ? "none" : "block";
 
   const msg = document.getElementById("vault-msg");
-  const p2 = document.getElementById("vault-pw2");
   const btn = document.getElementById("vault-submit");
 
   document.body.classList.add("vault-locked");
@@ -1131,7 +1192,6 @@ function initVaultGate() {
 
   if (enc && !subtleOk) {
     if (msg) msg.textContent = "Ein verschlüsselter Tresor ist vorhanden, aber unter file:// u. Ä. kann der Browser nicht entschlüsseln. Öffne die Seite über einen kleinen lokalen Server oder HTTPS, dann funktioniert das Passwort wieder.";
-    if (p2) p2.style.display = "none";
     if (btn) btn.style.display = "none";
     return;
   }
@@ -1139,9 +1199,8 @@ function initVaultGate() {
   if (enc && subtleOk) {
     if (msg) {
       msg.textContent =
-        "Zentrales Tresor-Passwort eingeben — gleicher fest eingebauter Wert wie beim ersten Einrichten.";
+        "Tresor-Passwort eingeben — einmal, derselbe fest eingebaute Wert wie beim ersten Mal.";
     }
-    if (p2) p2.style.display = "none";
     if (btn) {
       btn.style.display = "block";
       btn.textContent = "Entsperren";
@@ -1154,7 +1213,6 @@ function initVaultGate() {
 
   if (!subtleOk) {
     if (msg) msg.textContent = "Ohne sicheren Kontext (typisch: direkt geöffnete Datei) ist keine Verschlüsselung möglich — nur ein ungeschützter lokaler Modus.";
-    if (p2) p2.style.display = "none";
     if (btn) {
       btn.textContent = "Ohne Schutz fortfahren";
       btn.onclick = () => void bootstrapLegacyInsecure();
@@ -1163,10 +1221,9 @@ function initVaultGate() {
     const legacy = !!localStorage.getItem(STORAGE_KEY);
     if (msg) {
       msg.textContent = legacy
-        ? "Lege das zentrale Tresor-Passwort fest (zweimal gleich) — bestehende Schichten werden verschlüsselt übernommen."
-        : "Lege das zentrale Tresor-Passwort fest (zweimal gleich). Es ist in der App fest hinterlegt.";
+        ? "Tresor-Passwort einmal eingeben — bestehende Schichten werden verschlüsselt übernommen."
+        : "Tresor-Passwort einmal eingeben — der fest eingebaute zentrale Wert.";
     }
-    if (p2) p2.style.display = "block";
     if (btn) {
       btn.textContent = "Tresor einrichten";
       btn.onclick = () => setupVaultFromUI();
