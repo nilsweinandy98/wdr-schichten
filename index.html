@@ -539,9 +539,28 @@ const TEMPLATE_URL = "https://raw.githubusercontent.com/nilsweinandy98/wdr-schic
 
 /** Einzig gültiges Tresor-Passwort (Klartext nur in dieser Datei). Im Repo liegt nur der SHA-256. */
 const CENTRAL_VAULT_PASSWORD = "nilsweinandywdr";
-/** SHA-256 (UTF-8) — muss mit „wdr-central-auth.json“ im Repo übereinstimmen. */
+/** SHA-256 (UTF-8) von CENTRAL_VAULT_PASSWORD — muss in wdr-central-auth.json stehen (z. B. Feld „sha256Hex“). */
 const CENTRAL_VAULT_PW_SHA256_HEX =
   "bcb6331f7f9fcb0dfc7d64438bd69d633466d4271b8d6fd21c164f52d15e6008";
+
+function normalizeSha256Hex(h) {
+  if (h == null || h === "") return "";
+  let s = String(h).trim().toLowerCase().replace(/^0x/, "");
+  return /^[0-9a-f]{64}$/.test(s) ? s : "";
+}
+
+/** Manuelle Repo-Dateien: akzeptiert sha256Hex | sha256 | hash | vaultPwSha256; „format“ ist optional. */
+function githubExtractCentralAuthHex(o) {
+  if (!o || typeof o !== "object") return "";
+  const raw =
+    o.sha256Hex ??
+    o.sha256 ??
+    o.hash ??
+    o.passwordSha256 ??
+    o.vaultPwSha256 ??
+    "";
+  return normalizeSha256Hex(raw);
+}
 
 const STATUS = {
   ausstehend: { label:"Ausstehend",  color:"#b45309", bg:"#fef3c7", dot:"#f59e0b", next:"mail" },
@@ -756,7 +775,9 @@ async function githubGetFileJson(cfg, relativePath) {
   if (!data.content) throw new Error("Leere GitHub-Antwort.");
   let parsed;
   try {
-    parsed = JSON.parse(b64Utf8ToStr(data.content));
+    let txt = b64Utf8ToStr(data.content);
+    txt = txt.replace(/^\uFEFF/, "").trim();
+    parsed = JSON.parse(txt);
   } catch (_) {
     throw new Error("Datei ist kein gültiges JSON.");
   }
@@ -830,7 +851,8 @@ async function githubTryFetchCentralAuth(cfg) {
       tried.add(key);
       try {
         const o = await githubGetFileJson(mini, rel);
-        if (o && o.format === "wdr-central-auth" && o.sha256Hex) return o;
+        const hex = githubExtractCentralAuthHex(o);
+        if (hex) return { format: "wdr-central-auth", sha256Hex: hex };
       } catch (_) {}
     }
   }
@@ -915,8 +937,9 @@ async function sha256HexUtf8(text) {
  * Entsperren nur wenn Eingabe SHA-256 = Repo-Datei wdr-central-auth.json = festem App-Wert.
  */
 async function verifyCentralVaultAgainstGithub(pw) {
-  const typedHash = await sha256HexUtf8(pw);
-  if (!typedHash || typedHash !== CENTRAL_VAULT_PW_SHA256_HEX) {
+  const typedHash = normalizeSha256Hex(await sha256HexUtf8(pw));
+  const central = normalizeSha256Hex(CENTRAL_VAULT_PW_SHA256_HEX);
+  if (!typedHash || typedHash !== central) {
     return { ok: false, message: "Passwort falsch." };
   }
   const cfg = getGhConfigParsed();
@@ -932,11 +955,12 @@ async function verifyCentralVaultAgainstGithub(pw) {
   } catch (e) {
     return { ok: false, message: "GitHub: " + (e.message || "nicht erreichbar") };
   }
-  if (!remote || remote.sha256Hex !== CENTRAL_VAULT_PW_SHA256_HEX) {
+  const remoteHex = remote ? normalizeSha256Hex(remote.sha256Hex) : "";
+  if (!remote || remoteHex !== central) {
     return {
       ok: false,
       message:
-        "wdr-central-auth.json fehlt oder passt nicht — einmal „Zu GitHub hochladen“ ausführen (legt die Datei mit dem festen Kennwort an).",
+        `Zentral-Auth: keine gültige wdr-central-auth.json unter Branch „${cfg.branch}“ (Schichten-Pfad in den Einstellungen: „${cfg.path}“). Lege z. B. „data/wdr-central-auth.json“ an mit exakt: {\"sha256Hex\":\"${central}\"} — oder „Zu GitHub hochladen“.`,
     };
   }
   return { ok: true };
@@ -948,7 +972,7 @@ async function githubMaybeWarnFingerprintMismatch(cfg) {
   try {
     const acc = await githubGetFileJson(cfg, side);
     if (!acc || acc.format !== "wdr-access" || !acc.vaultPwSha256) return;
-    if (acc.vaultPwSha256 !== CENTRAL_VAULT_PW_SHA256_HEX) {
+    if (normalizeSha256Hex(acc.vaultPwSha256) !== normalizeSha256Hex(CENTRAL_VAULT_PW_SHA256_HEX)) {
       showToast("„wdr-access.json“ im Repo weicht vom festen Zentral-Passwort ab — nicht manuell ändern.", "err");
     }
   } catch (_) {}
