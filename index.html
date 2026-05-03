@@ -24,6 +24,7 @@
     --blue: #2563eb;
     --amber: #d97706;
     --green: #059669;
+    --purple: #7c3aed;
     --red: #ef4444;
     --font-sans: 'IBM Plex Sans', system-ui, sans-serif;
     --font-mono: 'IBM Plex Mono', monospace;
@@ -38,573 +39,149 @@
     -webkit-font-smoothing: antialiased;
   }
 
-  /* ── Header ── */
-  header {
-    background: var(--dark);
-    padding: 20px 16px 18px;
-    position: sticky;
-    top: 0;
-    z-index: 10;
-  }
-  .h-wrap {
-    max-width: 560px;
-    margin: 0 auto;
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-end;
-  }
-  .h-eye {
-    font-family: var(--font-mono);
-    font-size: 10px;
-    color: #3b82f6;
-    letter-spacing: 2.5px;
-    font-weight: 600;
-    margin-bottom: 4px;
-    text-transform: uppercase;
-  }
-  .h-title {
-    font-family: var(--font-display);
-    font-size: 21px;
-    font-weight: 800;
-    color: #f8fafc;
-    letter-spacing: -0.5px;
-    line-height: 1.2;
-  }
+  header { background: var(--dark); padding: 18px 16px 16px; position: sticky; top: 0; z-index: 10; }
+  .h-wrap { max-width: 560px; margin: 0 auto; display: flex; justify-content: space-between; align-items: flex-end; }
+  .h-eye { font-family: var(--font-mono); font-size: 10px; color: #3b82f6; letter-spacing: 2.5px; font-weight: 600; margin-bottom: 4px; text-transform: uppercase; }
+  .h-title { font-family: var(--font-display); font-size: 20px; font-weight: 800; color: #f8fafc; letter-spacing: -0.5px; line-height: 1.2; }
+  .h-build { font-family: var(--font-mono); font-size: 9px; color: #94a3b8; margin-top: 4px; letter-spacing: 0.02em; }
   .h-meta { text-align: right; }
   .h-name { font-size: 13px; font-weight: 600; color: #cbd5e1; }
   .h-pv { font-family: var(--font-mono); font-size: 11px; color: #475569; margin-top: 2px; }
 
-  /* ── Layout ── */
-  main {
-    max-width: 560px;
-    margin: 0 auto;
-    padding: 14px 12px 100px;
-  }
+  main { max-width: 560px; margin: 0 auto; padding: 14px 12px 100px; }
 
-  /* ── Cards ── */
-  .card {
-    background: var(--card);
+  .earn-card {
+    background: linear-gradient(135deg, #0c1426 0%, #1e293b 100%);
     border-radius: 16px;
-    padding: 18px;
+    padding: 20px;
     margin-bottom: 12px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.07);
+    color: #fff;
+    box-shadow: 0 4px 20px rgba(12,20,38,0.15);
+    position: relative;
+    overflow: hidden;
   }
-  .sec-label {
-    font-size: 10px;
-    font-weight: 700;
-    color: var(--light);
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
-    margin-bottom: 12px;
+  .earn-card::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -20%;
+    width: 200px;
+    height: 200px;
+    background: radial-gradient(circle, rgba(59,130,246,0.15) 0%, transparent 70%);
+    pointer-events: none;
   }
-
-  /* ── Stats ── */
-  .stats {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 6px;
-    margin-bottom: 12px;
-  }
-  .stat-card {
-    background: var(--card);
-    border-radius: 12px;
-    padding: 13px 8px;
-    text-align: center;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.06);
-  }
-  .stat-n {
+  .earn-label {
     font-family: var(--font-mono);
-    font-size: 21px;
+    font-size: 10px;
+    color: #60a5fa;
+    letter-spacing: 2px;
     font-weight: 600;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+  }
+  .earn-amount {
+    font-family: var(--font-display);
+    font-size: 38px;
+    font-weight: 800;
+    letter-spacing: -1px;
+    margin-bottom: 12px;
     line-height: 1;
   }
-  .stat-l {
-    font-size: 9px;
-    color: var(--light);
-    margin-top: 3px;
-    font-weight: 600;
-    letter-spacing: 0.5px;
-    text-transform: uppercase;
-  }
+  .earn-amount .currency { font-size: 22px; opacity: 0.7; margin-right: 4px; vertical-align: top; margin-top: 6px; display: inline-block; }
+  .earn-breakdown { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 12px; }
+  .earn-item { font-size: 11px; }
+  .earn-item-label { color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
+  .earn-item-val { font-family: var(--font-mono); color: #f1f5f9; font-weight: 600; margin-top: 2px; font-size: 13px; }
 
-  /* ── Schichttyp Grid ── */
-  .typ-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 5px;
-    margin-bottom: 12px;
-  }
-  @media (min-width: 420px) {
-    .typ-grid { grid-template-columns: repeat(4, 1fr); }
-  }
-  .typ-btn {
-    background: #f8fafc;
-    border: 1.5px solid var(--border);
-    border-radius: 8px;
-    padding: 8px 4px;
-    font-size: 11px;
-    font-weight: 600;
-    cursor: pointer;
-    color: var(--muted);
-    line-height: 1.3;
-    text-align: center;
-    transition: all 0.1s;
-    -webkit-tap-highlight-color: transparent;
-  }
-  .typ-btn.active {
-    background: var(--dark);
-    border-color: var(--dark);
-    color: #fff;
-  }
+  .stats { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 6px; margin-bottom: 12px; }
+  .stat-card { background: var(--card); border-radius: 10px; padding: 11px 4px; text-align: center; box-shadow: 0 1px 2px rgba(0,0,0,0.06); }
+  .stat-n { font-family: var(--font-mono); font-size: 22px; font-weight: 600; line-height: 1; }
+  .stat-l { font-size: 9px; color: var(--light); margin-top: 3px; font-weight: 600; letter-spacing: 0.3px; text-transform: uppercase; }
+
+  .card { background: var(--card); border-radius: 16px; padding: 18px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.07); }
+  .sec-label { font-size: 10px; font-weight: 700; color: var(--light); letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 12px; }
+
+  .typ-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-bottom: 12px; }
+  .typ-btn { background: #f8fafc; border: 1.5px solid var(--border); border-radius: 8px; padding: 8px 4px; font-size: 11px; font-weight: 600; cursor: pointer; color: var(--muted); line-height: 1.3; text-align: center; transition: all 0.1s; -webkit-tap-highlight-color: transparent; }
+  .typ-btn.active { background: var(--dark); border-color: var(--dark); color: #fff; }
   .typ-btn:active { transform: scale(0.96); }
 
-  /* ── Zeit Preview ── */
-  .zeit-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: #eff6ff;
-    border: 1px solid #bfdbfe;
-    border-radius: 8px;
-    padding: 9px 12px;
-    margin-bottom: 12px;
-  }
-  .zeit-val {
-    font-family: var(--font-mono);
-    font-size: 13px;
-    color: #1d4ed8;
-    font-weight: 600;
-  }
+  .zeit-row { display: flex; align-items: center; gap: 8px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 9px 12px; margin-bottom: 12px; }
+  .zeit-val { font-family: var(--font-mono); font-size: 13px; color: #1d4ed8; font-weight: 600; }
 
-  /* ── Datum Input ── */
-  .d-label {
-    display: block;
-    font-size: 10px;
-    font-weight: 700;
-    color: var(--light);
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    margin-bottom: 5px;
-  }
-  .d-input {
-    width: 100%;
-    background: #f8fafc;
-    border: 1.5px solid var(--border);
-    border-radius: 8px;
-    padding: 10px 12px;
-    font-size: 16px;
-    font-family: var(--font-mono);
-    color: var(--text);
-    outline: none;
-    margin-bottom: 12px;
-    -webkit-appearance: none;
-  }
+  .d-label { display: block; font-size: 10px; font-weight: 700; color: var(--light); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 5px; }
+  .d-input { width: 100%; background: #f8fafc; border: 1.5px solid var(--border); border-radius: 8px; padding: 11px 12px; font-size: 16px; font-family: var(--font-mono); color: var(--text); outline: none; margin-bottom: 12px; -webkit-appearance: none; min-height: 44px; }
   .d-input:focus { border-color: #93c5fd; }
 
-  .d-row {
-    display: flex;
-    gap: 8px;
-    align-items: stretch;
-    margin-bottom: 12px;
-  }
-  .d-row .d-input { flex: 1; margin-bottom: 0; min-width: 0; }
-  .btn-cal {
-    flex-shrink: 0;
-    width: 46px;
-    background: #eff6ff;
-    border: 1.5px solid #bfdbfe;
-    border-radius: 8px;
-    font-size: 18px;
-    cursor: pointer;
-    line-height: 1;
-    -webkit-tap-highlight-color: transparent;
-  }
-  .btn-cal:active { opacity: 0.85; }
-  .visually-hidden {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0,0,0,0);
-    white-space: nowrap;
-    border: 0;
-  }
-
-  .s-pay {
-    font-family: var(--font-mono);
-    font-size: 11px;
-    color: var(--muted);
-    margin-top: 4px;
-    font-weight: 600;
-  }
-  .s-ft-pill {
-    border: 1.5px solid var(--border);
-    border-radius: 16px;
-    padding: 3px 8px;
-    font-size: 10px;
-    font-weight: 700;
-    cursor: pointer;
-    background: #f8fafc;
-    color: var(--muted);
-    font-family: var(--font-sans);
-    -webkit-tap-highlight-color: transparent;
-    margin-left: 8px;
-    flex-shrink: 0;
-  }
-  .s-ft-pill.ft-yes { border-color: #a78bfa; color: #5b21b6; background: #ede9fe; }
-  .s-ft-pill.ft-no { border-color: #cbd5e1; color: #475569; background: #f1f5f9; }
-  .s-ft-pill.ft-auto { border-color: #bae6fd; color: #0369a1; background: #e0f2fe; }
-  .s-top-row2 {
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    flex-wrap: wrap;
-    gap: 4px 0;
-    margin-bottom: 4px;
-  }
-
-  .pay-card .pay-open {
-    font-family: var(--font-mono);
-    font-size: 26px;
-    font-weight: 600;
-    color: var(--amber);
-    margin-bottom: 4px;
-  }
-  .pay-card .pay-sub { font-size: 12px; color: var(--muted); margin-bottom: 14px; }
-  .pay-break {
-    border-top: 1px solid var(--border);
-    padding-top: 12px;
-    margin-top: 4px;
-  }
-  .pay-break-title {
-    font-size: 10px;
-    font-weight: 700;
-    color: var(--light);
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    margin-bottom: 10px;
-  }
-  .pay-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    font-size: 13px;
-    padding: 5px 0;
-    border-bottom: 1px solid #f1f5f9;
-    gap: 12px;
-  }
-  .pay-row:last-child { border-bottom: none; }
-  .pay-row-k { color: var(--muted); font-weight: 600; font-size: 12px; }
-  .pay-row-v { font-family: var(--font-mono); font-weight: 600; flex-shrink: 0; }
-  .pay-foot {
-    font-size: 11px;
-    color: var(--light);
-    margin-top: 12px;
-    line-height: 1.45;
-  }
-
-  /* ── Buttons ── */
-  .btn-primary {
-    width: 100%;
-    background: var(--dark);
-    color: #fff;
-    border: none;
-    border-radius: 10px;
-    padding: 13px;
-    font-size: 14px;
-    font-weight: 700;
-    cursor: pointer;
-    font-family: var(--font-sans);
-    -webkit-tap-highlight-color: transparent;
-  }
+  .btn-primary { width: 100%; background: var(--dark); color: #fff; border: none; border-radius: 10px; padding: 13px; font-size: 14px; font-weight: 700; cursor: pointer; font-family: var(--font-sans); -webkit-tap-highlight-color: transparent; }
   .btn-primary:active { opacity: 0.85; }
 
-  .btn-outline {
-    background: transparent;
-    border: 1.5px solid var(--border);
-    border-radius: 7px;
-    padding: 7px 12px;
-    font-size: 12px;
-    font-weight: 600;
-    cursor: pointer;
-    color: var(--muted);
-    font-family: var(--font-sans);
-    white-space: nowrap;
-  }
-
-  .btn-dl {
-    background: var(--dark);
-    border: none;
-    border-radius: 7px;
-    padding: 7px 14px;
-    font-size: 12px;
-    font-weight: 700;
-    cursor: pointer;
-    color: #fff;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    flex: 1;
-    justify-content: center;
-    font-family: var(--font-sans);
-    -webkit-tap-highlight-color: transparent;
-  }
+  .btn-outline { background: transparent; border: 1.5px solid var(--border); border-radius: 7px; padding: 7px 12px; font-size: 12px; font-weight: 600; cursor: pointer; color: var(--muted); font-family: var(--font-sans); white-space: nowrap; }
+  .btn-dl { background: var(--dark); border: none; border-radius: 7px; padding: 7px 12px; font-size: 12px; font-weight: 700; cursor: pointer; color: #fff; display: flex; align-items: center; gap: 5px; flex: 1; justify-content: center; font-family: var(--font-sans); -webkit-tap-highlight-color: transparent; min-width: 0; }
   .btn-dl:active { opacity: 0.85; }
   .btn-dl:disabled { opacity: 0.65; }
+  .btn-del { background: #fff0f0; border: 1.5px solid #fecaca; border-radius: 7px; padding: 7px 10px; font-size: 12px; font-weight: 700; cursor: pointer; color: var(--red); font-family: var(--font-sans); }
+  .btn-danger { background: var(--red); color: #fff; border: none; border-radius: 7px; padding: 7px 16px; font-size: 12px; font-weight: 700; cursor: pointer; font-family: var(--font-sans); flex: 1; }
 
-  .btn-del {
-    background: #fff0f0;
-    border: 1.5px solid #fecaca;
-    border-radius: 7px;
-    padding: 7px 10px;
-    font-size: 12px;
-    font-weight: 700;
-    cursor: pointer;
-    color: var(--red);
-    font-family: var(--font-sans);
-  }
-  .btn-danger {
-    background: var(--red);
-    color: #fff;
-    border: none;
-    border-radius: 7px;
-    padding: 7px 16px;
-    font-size: 12px;
-    font-weight: 700;
-    cursor: pointer;
-    font-family: var(--font-sans);
-    flex: 1;
-  }
-
-  /* ── Filter ── */
-  .filter-row {
-    display: flex;
-    gap: 6px;
-    margin-bottom: 10px;
-    overflow-x: auto;
-    padding-bottom: 2px;
-    -webkit-overflow-scrolling: touch;
-  }
+  .filter-row { display: flex; gap: 6px; margin-bottom: 10px; overflow-x: auto; padding-bottom: 2px; -webkit-overflow-scrolling: touch; }
   .filter-row::-webkit-scrollbar { display: none; }
-  .f-btn {
-    background: var(--card);
-    border: 1.5px solid var(--border);
-    border-radius: 20px;
-    padding: 6px 12px;
-    font-size: 11px;
-    font-weight: 700;
-    cursor: pointer;
-    color: var(--muted);
-    white-space: nowrap;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    font-family: var(--font-sans);
-    -webkit-tap-highlight-color: transparent;
-  }
-  .f-btn.active {
-    background: var(--dark);
-    color: #fff;
-    border-color: var(--dark);
-  }
-  .f-badge {
-    font-family: var(--font-mono);
-    font-size: 10px;
-    background: rgba(0,0,0,0.08);
-    border-radius: 10px;
-    padding: 1px 5px;
-  }
+  .f-btn { background: var(--card); border: 1.5px solid var(--border); border-radius: 20px; padding: 6px 12px; font-size: 11px; font-weight: 700; cursor: pointer; color: var(--muted); white-space: nowrap; display: flex; align-items: center; gap: 5px; font-family: var(--font-sans); -webkit-tap-highlight-color: transparent; }
+  .f-btn.active { background: var(--dark); color: #fff; border-color: var(--dark); }
+  .f-badge { font-family: var(--font-mono); font-size: 10px; background: rgba(0,0,0,0.08); border-radius: 10px; padding: 1px 5px; }
   .f-btn.active .f-badge { background: rgba(255,255,255,0.2); }
 
-  /* ── Schicht Cards ── */
   .list { display: flex; flex-direction: column; gap: 8px; }
   .empty { text-align: center; color: var(--light); padding: 40px 0; font-size: 13px; }
 
-  .s-card {
-    background: var(--card);
-    border-radius: 14px;
-    padding: 14px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.07);
-    animation: fadeUp 0.15s ease;
-  }
-  @keyframes fadeUp {
-    from { opacity: 0; transform: translateY(5px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
+  .s-card { background: var(--card); border-radius: 14px; padding: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.07); animation: fadeUp 0.15s ease; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+  .s-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; gap: 8px; }
+  .s-datum { font-family: var(--font-mono); font-size: 17px; font-weight: 600; color: var(--text); }
+  .s-day { font-size: 11px; color: var(--muted); margin-left: 6px; font-weight: 500; }
+  .s-tags { display: flex; gap: 4px; flex-wrap: wrap; }
+  .s-tag { font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 4px; letter-spacing: 0.3px; text-transform: uppercase; }
+  .s-tag-sun { background: #fef3c7; color: #b45309; }
+  .s-tag-holiday { background: #fee2e2; color: #b91c1c; }
+  .s-tag-night { background: #ede9fe; color: #6d28d9; }
 
-  .s-top {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 6px;
-  }
-  .s-datum {
-    font-family: var(--font-mono);
-    font-size: 19px;
-    font-weight: 600;
-    color: var(--text);
-  }
-  .s-pill {
-    border: none;
-    border-radius: 20px;
-    padding: 4px 10px;
-    font-size: 11px;
-    font-weight: 700;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    font-family: var(--font-sans);
-    -webkit-tap-highlight-color: transparent;
-  }
+  .s-pill { border: none; border-radius: 20px; padding: 4px 10px; font-size: 11px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px; font-family: var(--font-sans); -webkit-tap-highlight-color: transparent; }
   .s-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
 
-  .s-mid {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 10px;
-  }
+  .s-mid { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
   .s-typ { font-size: 14px; font-weight: 700; }
   .s-zeit { font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
 
-  .s-acts { display: flex; gap: 6px; }
-
-  /* ── Spinner ── */
-  .spin {
-    display: inline-block;
-    width: 11px; height: 11px;
-    border: 2px solid rgba(255,255,255,0.3);
-    border-top-color: #fff;
-    border-radius: 50%;
-    animation: spin 0.7s linear infinite;
-    flex-shrink: 0;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  /* ── Modal / Sheet ── */
-  .overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.5);
+  .s-pay {
     display: flex;
-    align-items: flex-end;
-    justify-content: center;
-    z-index: 100;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.2s;
-  }
-  .overlay.show { opacity: 1; pointer-events: all; }
-  .sheet {
-    background: #fff;
-    border-radius: 20px 20px 0 0;
-    padding: 10px 20px 40px;
-    width: 100%;
-    max-width: 580px;
-    box-shadow: 0 -8px 40px rgba(0,0,0,0.2);
-    max-height: 90vh;
-    overflow-y: auto;
-    transform: translateY(20px);
-    transition: transform 0.25s ease;
-    -webkit-overflow-scrolling: touch;
-  }
-  .overlay.show .sheet { transform: translateY(0); }
-
-  .handle {
-    width: 36px; height: 4px;
-    background: var(--border);
-    border-radius: 2px;
-    margin: 0 auto 16px;
-  }
-  .sh-head {
-    display: flex;
+    align-items: baseline;
     justify-content: space-between;
-    align-items: center;
-    margin-bottom: 16px;
-  }
-  .sh-title { font-size: 16px; font-weight: 700; font-family: var(--font-display); }
-  .sh-close {
-    background: #f1f5f9;
-    border: none;
-    border-radius: 20px;
-    width: 28px; height: 28px;
-    cursor: pointer;
-    font-size: 13px;
-    color: var(--muted);
-  }
-  .sh-acts { display: flex; gap: 8px; margin-top: 16px; }
-
-  /* ── Preview Doc ── */
-  .prev-doc {
     background: #f8fafc;
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    overflow: hidden;
+    border-radius: 8px;
+    padding: 8px 12px;
     margin-bottom: 10px;
   }
-  .prev-doc-title {
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--muted);
-    padding: 10px 12px;
-    background: #f1f5f9;
-    border-bottom: 1px solid var(--border);
-    text-align: center;
-  }
-  .prev-row { display: flex; border-bottom: 1px solid #f1f5f9; }
-  .prev-k {
-    width: 150px;
-    padding: 7px 10px;
-    font-weight: 600;
-    color: var(--muted);
-    background: #f8fafc;
-    flex-shrink: 0;
-    font-size: 11px;
-  }
-  .prev-v {
-    padding: 7px 10px;
-    font-family: var(--font-mono);
-    font-size: 11px;
-    color: var(--text);
-    font-weight: 500;
-  }
-  .prev-file {
-    font-size: 10px;
-    color: var(--light);
-    font-family: var(--font-mono);
-    word-break: break-all;
-    margin-bottom: 4px;
-    line-height: 1.5;
-  }
+  .s-pay-label { font-size: 10px; font-weight: 600; color: var(--muted); letter-spacing: 0.5px; text-transform: uppercase; }
+  .s-pay-val { font-family: var(--font-mono); font-size: 16px; font-weight: 700; color: var(--text); }
+  .s-pay-bonus { font-size: 10px; color: var(--green); font-weight: 600; margin-left: 6px; }
 
-  /* ── Toast ── */
-  .toast {
-    position: fixed;
-    bottom: 32px;
-    left: 50%;
-    transform: translateX(-50%) translateY(20px);
-    color: #fff;
-    padding: 11px 20px;
-    border-radius: 30px;
-    font-size: 13px;
-    font-weight: 600;
-    z-index: 200;
-    white-space: nowrap;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.25);
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.2s, transform 0.2s;
-    font-family: var(--font-sans);
-  }
-  .toast.show {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0);
-  }
+  .s-acts { display: flex; gap: 6px; flex-wrap: wrap; }
 
-  /* ── iOS safe area ── */
+  .spin { display: inline-block; width: 11px; height: 11px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: flex-end; justify-content: center; z-index: 100; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+  .overlay.show { opacity: 1; pointer-events: all; }
+  .sheet { background: #fff; border-radius: 20px 20px 0 0; padding: 10px 20px 40px; width: 100%; max-width: 580px; box-shadow: 0 -8px 40px rgba(0,0,0,0.2); max-height: 90vh; overflow-y: auto; transform: translateY(20px); transition: transform 0.25s ease; -webkit-overflow-scrolling: touch; }
+  .overlay.show .sheet { transform: translateY(0); }
+  .handle { width: 36px; height: 4px; background: var(--border); border-radius: 2px; margin: 0 auto 16px; }
+  .sh-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+  .sh-title { font-size: 16px; font-weight: 700; font-family: var(--font-display); }
+  .sh-close { background: #f1f5f9; border: none; border-radius: 20px; width: 28px; height: 28px; cursor: pointer; font-size: 13px; color: var(--muted); }
+  .sh-acts { display: flex; gap: 8px; margin-top: 16px; }
+
+  .toast { position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%) translateY(20px); color: #fff; padding: 11px 20px; border-radius: 30px; font-size: 13px; font-weight: 600; z-index: 200; max-width: 90vw; text-align: center; box-shadow: 0 4px 20px rgba(0,0,0,0.25); pointer-events: none; opacity: 0; transition: opacity 0.2s, transform 0.2s; font-family: var(--font-sans); }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
   @supports (padding-bottom: env(safe-area-inset-bottom)) {
     main { padding-bottom: calc(100px + env(safe-area-inset-bottom)); }
     .sheet { padding-bottom: calc(40px + env(safe-area-inset-bottom)); }
@@ -618,6 +195,7 @@
     <div>
       <div class="h-eye">WDR · Prognose</div>
       <h1 class="h-title">Tageseinsatz&shy;nachweise</h1>
+      <div class="h-build">Stand <span id="header-clock">–</span></div>
     </div>
     <div class="h-meta">
       <div class="h-name">Nils Weinandy</div>
@@ -627,10 +205,27 @@
 </header>
 
 <main>
-  <!-- Stats -->
+  <div class="earn-card">
+    <div class="earn-label">Offen (noch nicht abgerechnet)</div>
+    <div class="earn-amount"><span class="currency">€</span><span id="earn-total">0,00</span></div>
+    <div class="earn-breakdown">
+      <div class="earn-item">
+        <div class="earn-item-label">Grund</div>
+        <div class="earn-item-val" id="earn-base">0,00 €</div>
+      </div>
+      <div class="earn-item">
+        <div class="earn-item-label">Zuschläge</div>
+        <div class="earn-item-val" id="earn-bonus">0,00 €</div>
+      </div>
+      <div class="earn-item">
+        <div class="earn-item-label">Schichten</div>
+        <div class="earn-item-val" id="earn-count">0</div>
+      </div>
+    </div>
+  </div>
+
   <div class="stats" id="stats"></div>
 
-  <!-- Add form -->
   <div class="card">
     <div class="sec-label">Neue Schicht</div>
     <div class="typ-grid" id="typ-grid"></div>
@@ -639,44 +234,15 @@
       <span class="zeit-val" id="zeit-preview">–</span>
     </div>
     <label class="d-label">Datum</label>
-    <div class="d-row">
-      <input class="d-input" id="datum-input" placeholder="03.05.26" maxlength="8" inputmode="numeric" autocomplete="off"/>
-      <button type="button" class="btn-cal" id="datum-cal-btn" title="Kalender">📅</button>
-    </div>
-    <input type="date" class="visually-hidden" id="datum-picker" tabindex="-1"/>
+    <input class="d-input" id="datum-input" type="date"/>
     <button class="btn-primary" onclick="handleAdd()">+ Schicht hinzufügen</button>
   </div>
 
-  <!-- Filter -->
   <div class="filter-row" id="filter-row"></div>
 
-  <!-- List -->
   <div class="list" id="list"></div>
-
-  <div class="card pay-card" id="pay-summary"></div>
 </main>
 
-<!-- Preview Sheet -->
-<div class="overlay" id="overlay-preview" onclick="closeSheet('preview')">
-  <div class="sheet" onclick="event.stopPropagation()">
-    <div class="handle"></div>
-    <div class="sh-head">
-      <span class="sh-title">Vorschau</span>
-      <button class="sh-close" onclick="closeSheet('preview')">✕</button>
-    </div>
-    <div class="prev-doc">
-      <div class="prev-doc-title">Tageseinsatznachweis von prognosemitarbeiter*innen</div>
-      <div id="preview-rows"></div>
-    </div>
-    <div class="prev-file" id="preview-filename"></div>
-    <div class="sh-acts">
-      <button class="btn-outline" onclick="closeSheet('preview')">Schließen</button>
-      <button class="btn-dl" id="preview-dl-btn" onclick="downloadFromPreview()">⬇ DOCX herunterladen</button>
-    </div>
-  </div>
-</div>
-
-<!-- Delete Confirm Sheet -->
 <div class="overlay" id="overlay-delete" onclick="closeSheet('delete')">
   <div class="sheet" onclick="event.stopPropagation()" style="padding:10px 20px 40px">
     <div class="handle"></div>
@@ -689,230 +255,194 @@
   </div>
 </div>
 
-<!-- Toast -->
 <div class="toast" id="toast"></div>
 
 <script>
-// ─── Data ─────────────────────────────────────────────────────────────────
+/** Versionsdatum dieser HTML-Datei (TT.MM.JJ); bei Änderungen anpassen */
+const APP_BUILD_STAMP = "03.05.26";
+
 const SCHICHTEN = [
-  { typ: "ZePrA 1",    beginn: "06:30", ende: "14:42" },
-  { typ: "ZePrA 2",    beginn: "08:00", ende: "15:12" },
-  { typ: "ZePrA 4",    beginn: "14:15", ende: "22:27" },
-  { typ: "ZePrA 5",    beginn: "15:00", ende: "23:12" },
-  { typ: "ZePrA MLD",  beginn: "11:00", ende: "19:12" },
-  { typ: "ZePrA WE 1", beginn: "08:00", ende: "14:42" },
-  { typ: "ZePrA WE 2", beginn: "12:00", ende: "20:12" },
-  { typ: "ZePrA WE 3", beginn: "15:00", ende: "23:12" },
-  { typ: "ZePrA WE S", beginn: "10:00", ende: "18:12" },
-  { typ: "Apaka 7",    beginn: "07:00", ende: "15:12" },
-  { typ: "Apaka 11",   beginn: "11:00", ende: "19:12" },
-  { typ: "Nachschicht", beginn: "22:45", ende: "06:57" },
+  { typ: "ZePrA 1",      beginn: "06:30", ende: "14:42" },
+  { typ: "ZePrA 2",      beginn: "08:00", ende: "15:12" },
+  { typ: "ZePrA 4",      beginn: "14:15", ende: "22:27" },
+  { typ: "ZePrA 5",      beginn: "15:00", ende: "23:12" },
+  { typ: "ZePrA Nacht",  beginn: "22:45", ende: "06:57" },
+  { typ: "ZePrA MLD",    beginn: "11:00", ende: "19:12" },
+  { typ: "ZePrA WE 1",   beginn: "08:00", ende: "14:42" },
+  { typ: "ZePrA WE 2",   beginn: "12:00", ende: "20:12" },
+  { typ: "ZePrA WE 3",   beginn: "15:00", ende: "23:12" },
+  { typ: "ZePrA WE S",   beginn: "10:00", ende: "18:12" },
+  { typ: "Apaka 7",      beginn: "07:00", ende: "15:12" },
+  { typ: "Apaka 11",     beginn: "11:00", ende: "19:12" },
 ];
 
-const STORAGE_KEY = "wdr-v5";
-const STORAGE_KEY_LEGACY = "wdr-v4";
+const HONORAR_TAG = 245;
+const SONNTAGS_ZUSCHLAG = 0.50;
+const FEIERTAGS_ZUSCHLAG = 1.00;
+const NACHT_ZUSCHLAG = 0.25;
 
-const TAG_SATZ = 245;
+const FEIERTAGE_NRW = new Set([
+  "2025-01-01","2025-04-18","2025-04-21","2025-05-01","2025-05-29","2025-06-09","2025-06-19",
+  "2025-10-03","2025-11-01","2025-12-25","2025-12-26",
+  "2026-01-01","2026-04-03","2026-04-06","2026-05-01","2026-05-14","2026-05-25","2026-06-04",
+  "2026-10-03","2026-11-01","2026-12-25","2026-12-26",
+  "2027-01-01","2027-03-26","2027-03-29","2027-05-01","2027-05-06","2027-05-17","2027-05-27",
+  "2027-10-03","2027-11-01","2027-12-25","2027-12-26",
+]);
+
+const STORAGE_KEY = "wdr-v5";
+const TEMPLATE_URL = "https://raw.githubusercontent.com/nilsweinandy98/wdr-schichten/main/template.docx";
 
 const STATUS = {
-  ausstehend: { label:"Ausstehend", color:"#b45309", bg:"#fef3c7", dot:"#f59e0b", next:"generiert" },
-  generiert:  { label:"Generiert",  color:"#1d4ed8", bg:"#dbeafe", dot:"#3b82f6", next:"mail_raus" },
-  mail_raus:  { label:"Mail raus", color:"#6d28d9", bg:"#ede9fe", dot:"#7c3aed", next:"abgerechnet" },
-  abgerechnet:{ label:"Abgerechnet",color:"#065f46", bg:"#d1fae5", dot:"#10b981", next:"ausstehend" },
+  ausstehend: { label:"Ausstehend",  color:"#b45309", bg:"#fef3c7", dot:"#f59e0b", next:"mail" },
+  mail:       { label:"Mail raus",   color:"#6d28d9", bg:"#ede9fe", dot:"#8b5cf6", next:"abgerechnet" },
+  abgerechnet:{ label:"Abgerechnet", color:"#065f46", bg:"#d1fae5", dot:"#10b981", next:"ausstehend" },
 };
 
 let state = {
   schichten: [],
   selTyp: SCHICHTEN[0].typ,
   filter: "alle",
-  previewId: null,
   deleteId: null,
   loading: null,
 };
 
-// ─── Persist ──────────────────────────────────────────────────────────────
-function normalizeSchichten(arr) {
-  return arr.map(s => {
-    let st = s.status;
-    if (!STATUS[st]) st = "ausstehend";
-    let fo = s.feiertagOverride;
-    if (fo !== true && fo !== false) fo = null;
-    return { ...s, status: st, feiertagOverride: fo };
-  });
-}
-
 function load() {
-  try {
-    let raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) raw = localStorage.getItem(STORAGE_KEY_LEGACY);
-    if (raw) state.schichten = normalizeSchichten(JSON.parse(raw));
-  } catch {}
+  try { const r = localStorage.getItem(STORAGE_KEY); if (r) state.schichten = JSON.parse(r); } catch {}
+  state.schichten = state.schichten.map(s => s.status === "generiert" ? {...s, status: "mail"} : s);
 }
 function save() {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state.schichten)); } catch {}
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────
 function uid() { return Math.random().toString(36).slice(2,10); }
-function today() {
+
+function todayISO() {
   const d = new Date();
-  return [d.getDate(), d.getMonth()+1, d.getFullYear()%100].map(n=>String(n).padStart(2,"0")).join(".");
-}
-function parseDate(s) {
-  const [dd,mm,yy] = s.split(".");
-  return new Date(2000+parseInt(yy), parseInt(mm)-1, parseInt(dd));
-}
-function formatEUR(n) {
-  return new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" }).format(n);
-}
-function deDatumToIso(s) {
-  if (!/^\d{2}\.\d{2}\.\d{2}$/.test(s)) return "";
-  const [dd,mm,yy] = s.split(".").map(x=>parseInt(x,10));
-  const y = 2000 + yy;
-  return y+"-"+String(mm).padStart(2,"0")+"-"+String(dd).padStart(2,"0");
-}
-function isoToDeDatum(iso) {
-  if (!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) return "";
-  const [y,m,d] = iso.split("-").map(x=>parseInt(x,10));
-  return [d,m,y%100].map(n=>String(n).padStart(2,"0")).join(".");
+  return [d.getFullYear(), String(d.getMonth()+1).padStart(2,"0"), String(d.getDate()).padStart(2,"0")].join("-");
 }
 
-function dateKey(d) {
-  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+function isoToDe(iso) {
+  const [y,m,d] = iso.split("-");
+  return `${d}.${m}.${y.slice(2)}`;
 }
 
-function easterSunday(y) {
-  const a = y % 19, b = Math.floor(y / 100), c = y % 100;
-  const d = Math.floor(b / 4), e = b % 4;
-  const f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3);
-  const h = (19 * a + b - d - g + 15) % 30;
-  const i = Math.floor(c / 4), k = c % 4;
-  const l = (32 + 2 * e + 2 * i - h - k) % 7;
-  const m = Math.floor((a + 11 * h + 22 * l) / 451);
-  const mo = Math.floor((h + l - 7 * m + 114) / 31);
-  const day = ((h + l - 7 * m + 114) % 31) + 1;
-  return new Date(y, mo - 1, day);
+function isoToDate(iso) {
+  const [y,m,d] = iso.split("-");
+  return new Date(parseInt(y,10), parseInt(m,10)-1, parseInt(d,10));
 }
 
-const nrwHolidayCache = {};
-function buildNRWHolidaySet(year) {
-  const es = easterSunday(year);
-  const addDays = (dt, n) => { const x = new Date(dt); x.setDate(x.getDate()+n); return x; };
-  const keys = new Set();
-  const add = dt => keys.add(dateKey(dt));
-  add(new Date(year, 0, 1));
-  add(addDays(es, -2));
-  add(addDays(es, 1));
-  add(new Date(year, 4, 1));
-  add(addDays(es, 39));
-  add(addDays(es, 50));
-  add(new Date(year, 9, 3));
-  add(new Date(year, 11, 25));
-  add(new Date(year, 11, 26));
-  return keys;
-}
-function isNRWHoliday(date) {
-  const y = date.getFullYear();
-  if (!nrwHolidayCache[y]) nrwHolidayCache[y] = buildNRWHolidaySet(y);
-  return nrwHolidayCache[y].has(dateKey(date));
-}
+const DAYS_SHORT = ["So","Mo","Di","Mi","Do","Fr","Sa"];
+function dayName(iso) { return DAYS_SHORT[isoToDate(iso).getDay()]; }
 
-function parseHM(t) {
-  const [h,m] = t.split(":").map(Number);
-  return (h||0)*60+(m||0);
-}
-function intervalsOverlap(a0,a1,b0,b1) {
-  return Math.max(a0,b0) < Math.min(a1,b1);
-}
-function shiftOverlapsNight(beginn, ende) {
-  const B = parseHM(beginn);
-  const E = parseHM(ende);
-  if (E > B) {
-    return intervalsOverlap(B,E,0,6*60) || intervalsOverlap(B,E,22*60,1440);
-  }
-  const extEnd = 1440 + E;
-  const ns = 22*60, ne = 1440 + 6*60;
-  return Math.max(B, ns) < Math.min(extEnd, ne);
-}
-
-function effectiveFeiertag(schicht, d) {
-  const o = schicht.feiertagOverride;
-  if (o === true) return true;
-  if (o === false) return false;
-  return isNRWHoliday(d);
-}
-
-/** Ein Zuschlag pro Schicht: Feiertag > Sonntag > Nacht > normal */
-function computePay(schicht) {
-  const d = parseDate(schicht.datum);
-  const sunday = d.getDay() === 0;
-  const ft = effectiveFeiertag(schicht, d);
-  const night = shiftOverlapsNight(schicht.beginn, schicht.ende);
-
-  let rule = "normal";
-  let factor = 1;
-  let label = "Basis";
-
-  if (ft) {
-    rule = "feiertag"; factor = 2; label = "Feiertag (+100%)";
-  } else if (sunday) {
-    rule = "sonntag"; factor = 1.5; label = "Sonntag (+50%)";
-  } else if (night) {
-    rule = "nacht"; factor = 1.25; label = "Nacht (+25%)";
-  }
-
-  const amount = Math.round(TAG_SATZ * factor * 100) / 100;
-  return { amount, factor, rule, label };
-}
+function isSunday(iso) { return isoToDate(iso).getDay() === 0; }
+function isHoliday(iso) { return FEIERTAGE_NRW.has(iso); }
 
 function getInfo(typ) { return SCHICHTEN.find(s=>s.typ===typ)||SCHICHTEN[0]; }
-function filename(datum) { return datum.replace(/\./g,"_")+"_Tageseinsatznachweis_NilsWeinandy.docx"; }
 
-// ─── DOCX via Template ────────────────────────────────────────────────────
-// Loads the real template.docx from GitHub, unzips it, replaces only the
-// 4 data fields in document.xml, rezips and downloads.
+function nachtStunden(beginn, ende) {
+  const [bh,bm] = beginn.split(":").map(Number);
+  const [eh,em] = ende.split(":").map(Number);
+  let bMin = bh*60 + bm;
+  let eMin = eh*60 + em;
+  if (eMin <= bMin) eMin += 24*60;
 
-const TEMPLATE_URL = "https://raw.githubusercontent.com/nilsweinandy98/wdr-schichten/main/template.docx";
+  const nVon = 22*60;
+  const nBis = (24+6)*60;
+
+  let totalNacht = 0;
+  const fenster = [[nVon, nBis], [-120, 360]];
+  for (const [fv, fb] of fenster) {
+    const overlap = Math.max(0, Math.min(eMin, fb) - Math.max(bMin, fv));
+    totalNacht += overlap;
+  }
+  return totalNacht / 60;
+}
+
+function schichtDauer(beginn, ende) {
+  const [bh,bm] = beginn.split(":").map(Number);
+  const [eh,em] = ende.split(":").map(Number);
+  let bMin = bh*60 + bm;
+  let eMin = eh*60 + em;
+  if (eMin <= bMin) eMin += 24*60;
+  return (eMin - bMin) / 60;
+}
+
+function calcHonorar(schicht) {
+  const { datum, beginn, ende } = schicht;
+  const sun = isSunday(datum);
+  const hol = isHoliday(datum);
+
+  let grund = HONORAR_TAG;
+  let zuschlagFaktor = 0;
+  if (hol) zuschlagFaktor = FEIERTAGS_ZUSCHLAG;
+  else if (sun) zuschlagFaktor = SONNTAGS_ZUSCHLAG;
+  const sonZuschlag = grund * zuschlagFaktor;
+
+  const dauerH = schichtDauer(beginn, ende);
+  const nachtH = nachtStunden(beginn, ende);
+  const stundenSatz = dauerH > 0 ? grund / dauerH : 0;
+  const nachtZuschlag = stundenSatz * nachtH * NACHT_ZUSCHLAG;
+
+  const zuschlaege = sonZuschlag + nachtZuschlag;
+  const total = grund + zuschlaege;
+
+  return {
+    grund,
+    sonZuschlag,
+    nachtZuschlag,
+    zuschlaege,
+    total,
+    sun, hol,
+    nachtH,
+  };
+}
+
+function fmtEuro(n) {
+  return n.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function mergeRunsInCells(x) {
+  const placeholders = ["XXDATUMXX","XXBEGINXX","XXBEGINNXX","XXENDEXX","XXTYPXX"];
+  return x.replace(/(<w:tc>[\s\S]*?<\/w:tc>)/g, cell => {
+    const allText = [...cell.matchAll(/<w:t[^>]*>([^<]*)<\/w:t>/g)].map(m => m[1]).join("");
+    if (!placeholders.some(p => allText.includes(p))) return cell;
+    let replaced = false;
+    return cell.replace(/<w:t[^>]*>[^<]*<\/w:t>/g, () => {
+      if (!replaced) { replaced = true; return `<w:t>${allText}</w:t>`; }
+      return `<w:t></w:t>`;
+    });
+  });
+}
 
 async function downloadDocx(schicht) {
   const { datum, beginn, ende, typ } = schicht;
 
-  // 1. Fetch template
   const resp = await fetch(TEMPLATE_URL);
-  if (!resp.ok) throw new Error("Template konnte nicht geladen werden (" + resp.status + "). Ist template.docx im Repository?");
+  if (!resp.ok) throw new Error("Template konnte nicht geladen werden (" + resp.status + ").");
   const arrayBuffer = await resp.arrayBuffer();
 
-  // 2. Unzip
   const zip = await JSZip.loadAsync(arrayBuffer);
   const docFile = zip.file("word/document.xml");
   if (!docFile) throw new Error("word/document.xml nicht im Template gefunden.");
   let xml = await docFile.async("string");
 
-  // 3. Replace placeholders {{DATUM}}, {{BEGINN}}, {{ENDE}}, {{TYP}}
-  // These were placed in the template by make_template.py
+  xml = mergeRunsInCells(xml);
+
   const esc = s => String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 
-  const hasDatum  = xml.includes("{{DATUM}}");
-  const hasBeginn = xml.includes("{{BEGINN}}");
-  const hasEnde   = xml.includes("{{ENDE}}");
-  const hasTyp    = xml.includes("{{TYP}}");
-
-  if (!hasDatum || !hasBeginn || !hasEnde || !hasTyp) {
-    const missing = [
-      !hasDatum  && "{{DATUM}}",
-      !hasBeginn && "{{BEGINN}}",
-      !hasEnde   && "{{ENDE}}",
-      !hasTyp    && "{{TYP}}",
-    ].filter(Boolean).join(", ");
-    throw new Error(`Platzhalter fehlen im Template: ${missing}\n\nBitte make_template.py auf dem Mac ausführen und die neue template.docx hochladen.`);
+  const hasBegin = xml.includes("XXBEGINXX") || xml.includes("XXBEGINNXX");
+  if (!xml.includes("XXDATUMXX") || !hasBegin || !xml.includes("XXENDEXX") || !xml.includes("XXTYPXX")) {
+    throw new Error("Platzhalter im Template fehlen (XXDATUMXX, XXBEGINXX oder XXBEGINNXX, XXENDEXX, XXTYPXX). Bitte template.docx prüfen.");
   }
 
-  xml = xml.replaceAll("{{DATUM}}",  esc(datum));
-  xml = xml.replaceAll("{{BEGINN}}", esc(beginn));
-  xml = xml.replaceAll("{{ENDE}}",   esc(ende));
-  xml = xml.replaceAll("{{TYP}}",    esc(typ));
+  const datumDE = isoToDe(datum);
+  xml = xml.replaceAll("XXDATUMXX",  esc(datumDE));
+  xml = xml.replaceAll("XXBEGINXX", esc(beginn));
+  xml = xml.replaceAll("XXBEGINNXX", esc(beginn));
+  xml = xml.replaceAll("XXENDEXX",   esc(ende));
+  xml = xml.replaceAll("XXTYPXX",    esc(typ));
 
-  // 5. Write back and rezip
   zip.file("word/document.xml", xml);
   const blob = await zip.generateAsync({
     type: "blob",
@@ -921,8 +451,7 @@ async function downloadDocx(schicht) {
     compressionOptions: { level: 6 }
   });
 
-  // 6. Download
-  const fname = datum.replace(/\./g,"_") + "_Tageseinsatznachweis_NilsWeinandy.docx";
+  const fname = datumDE.replace(/\./g,"_") + "_Tageseinsatznachweis_NilsWeinandy.docx";
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url; a.download = fname; a.style.display = "none";
@@ -931,23 +460,37 @@ async function downloadDocx(schicht) {
   setTimeout(() => URL.revokeObjectURL(url), 2000);
 }
 
-// ─── Render ───────────────────────────────────────────────────────────────
 function render() {
+  renderEarnings();
   renderStats();
   renderTypGrid();
   renderZeit();
   renderFilter();
   renderList();
-  renderPaySummary();
+}
+
+function renderEarnings() {
+  const open = state.schichten.filter(s => s.status !== "abgerechnet");
+  let base = 0, bonus = 0;
+  for (const s of open) {
+    const h = calcHonorar(s);
+    base += h.grund;
+    bonus += h.zuschlaege;
+  }
+  const total = base + bonus;
+  document.getElementById("earn-total").textContent = fmtEuro(total);
+  document.getElementById("earn-base").textContent = fmtEuro(base) + " €";
+  document.getElementById("earn-bonus").textContent = fmtEuro(bonus) + " €";
+  document.getElementById("earn-count").textContent = open.length;
 }
 
 function renderStats() {
   const s = state.schichten;
   const cfg = [
-    ["Offen",       s.filter(x=>x.status==="ausstehend").length, "#d97706"],
-    ["Generiert",   s.filter(x=>x.status==="generiert").length,  "#2563eb"],
-    ["Mail raus",   s.filter(x=>x.status==="mail_raus").length, "#7c3aed"],
-    ["Erledigt",    s.filter(x=>x.status==="abgerechnet").length,"#059669"],
+    ["Alle",       s.length, "#0f172a"],
+    ["Offen",      s.filter(x=>x.status==="ausstehend").length, "#d97706"],
+    ["Mail",       s.filter(x=>x.status==="mail").length, "#7c3aed"],
+    ["Erledigt",   s.filter(x=>x.status==="abgerechnet").length, "#059669"],
   ];
   document.getElementById("stats").innerHTML = cfg.map(([l,n,c])=>`
     <div class="stat-card">
@@ -973,11 +516,10 @@ function renderFilter() {
   const counts = {
     alle: s.length,
     ausstehend: s.filter(x=>x.status==="ausstehend").length,
-    generiert:  s.filter(x=>x.status==="generiert").length,
-    mail_raus:  s.filter(x=>x.status==="mail_raus").length,
+    mail:       s.filter(x=>x.status==="mail").length,
     abgerechnet:s.filter(x=>x.status==="abgerechnet").length,
   };
-  const labels = { alle:"Alle", ausstehend:"Ausstehend", generiert:"Generiert", mail_raus:"Mail raus", abgerechnet:"Abgerechnet" };
+  const labels = { alle:"Alle", ausstehend:"Ausstehend", mail:"Mail raus", abgerechnet:"Abgerechnet" };
   document.getElementById("filter-row").innerHTML = Object.keys(counts).map(f=>`
     <button class="f-btn${state.filter===f?" active":""}" onclick="setFilter('${f}')">
       ${labels[f]}<span class="f-badge">${counts[f]}</span>
@@ -986,7 +528,9 @@ function renderFilter() {
 }
 
 function renderList() {
-  const sorted = [...state.schichten].sort((a,b)=>parseDate(b.datum)-parseDate(a.datum));
+  const sorted = [...state.schichten].sort((a,b)=>{
+    return isoToDate(b.datum) - isoToDate(a.datum);
+  });
   const filtered = sorted.filter(s=>state.filter==="alle"||s.status===state.filter);
 
   if (filtered.length===0) {
@@ -997,28 +541,37 @@ function renderList() {
   document.getElementById("list").innerHTML = filtered.map(s=>{
     const st = STATUS[s.status];
     const isLoad = state.loading===s.id;
-    const pay = computePay(s);
-    const fo = s.feiertagOverride;
-    const ftClass = fo===true?"ft-yes":fo===false?"ft-no":"ft-auto";
-    const ftTxt = fo===true?"FT an":fo===false?"FT aus":"FT Auto";
+    const h = calcHonorar(s);
+
+    const tags = [];
+    if (h.hol) tags.push(`<span class="s-tag s-tag-holiday">Feiertag +100%</span>`);
+    else if (h.sun) tags.push(`<span class="s-tag s-tag-sun">Sonntag +50%</span>`);
+    if (h.nachtH > 0) tags.push(`<span class="s-tag s-tag-night">Nacht +25%</span>`);
+
     return `
     <div class="s-card">
       <div class="s-top">
-        <span class="s-datum">${s.datum}</span>
+        <div>
+          <span class="s-datum">${isoToDe(s.datum)}</span>
+          <span class="s-day">${dayName(s.datum)}</span>
+        </div>
         <button type="button" class="s-pill" style="color:${st.color};background:${st.bg}" onclick="cycleStatus('${s.id}')">
           <span class="s-dot" style="background:${st.dot}"></span>${st.label}
         </button>
       </div>
-      <div class="s-top-row2">
-        <span class="s-pay">${s.status==="abgerechnet"?"—":formatEUR(pay.amount)+" · "+pay.label}</span>
-        <button type="button" class="s-ft-pill ${ftClass}" onclick="cycleFeiertag('${s.id}')" title="Feiertag NRW Auto/Manuell">${ftTxt}</button>
-      </div>
+      ${tags.length ? `<div class="s-tags" style="margin-bottom:8px">${tags.join("")}</div>` : ""}
       <div class="s-mid">
         <span class="s-typ">${s.typ}</span>
         <span class="s-zeit">${s.beginn}–${s.ende}</span>
       </div>
+      <div class="s-pay">
+        <span class="s-pay-label">Honorar</span>
+        <span>
+          <span class="s-pay-val">${fmtEuro(h.total)} €</span>
+          ${h.zuschlaege > 0 ? `<span class="s-pay-bonus">+${fmtEuro(h.zuschlaege)}</span>` : ""}
+        </span>
+      </div>
       <div class="s-acts">
-        <button type="button" class="btn-outline" onclick="openPreview('${s.id}')">Vorschau</button>
         <button type="button" class="btn-dl" onclick="handleDownload('${s.id}')" ${isLoad?"disabled":""} style="opacity:${isLoad?0.7:1}">
           ${isLoad?'<span class="spin"></span> Erstelle…':'⬇ DOCX'}
         </button>
@@ -1028,48 +581,6 @@ function renderList() {
   }).join("");
 }
 
-function renderPaySummary() {
-  const open = state.schichten.filter(s=>s.status!=="abgerechnet");
-  const breakdown = { feiertag: [], sonntag: [], nacht: [], normal: [] };
-  let sumBasis = 0;
-  let sumEffektiv = 0;
-  for (const s of open) {
-    const p = computePay(s);
-    sumBasis += TAG_SATZ;
-    sumEffektiv += p.amount;
-    breakdown[p.rule].push(p.amount);
-  }
-  const sumZuschlag = Math.round((sumEffektiv - sumBasis) * 100) / 100;
-
-  const lines = [
-    ["Basis ("+open.length+"× "+formatEUR(TAG_SATZ)+")", formatEUR(sumBasis)],
-    ["Zuschläge (netto)", formatEUR(sumZuschlag)],
-    ["Summe offen (geschätzt)", formatEUR(sumEffektiv)],
-  ];
-
-  const br = [
-    ["Feiertag (+100%)", breakdown.feiertag],
-    ["Sonntag (+50%)", breakdown.sonntag],
-    ["Nacht (+25%)", breakdown.nacht],
-    ["Ohne Zuschlag", breakdown.normal],
-  ];
-
-  const brHtml = br.filter(([,arr])=>arr.length).map(([name,arr])=>{
-    const sm = arr.reduce((a,b)=>a+b,0);
-    return `<div class="pay-row"><span class="pay-row-k">${name} · ${arr.length}×</span><span class="pay-row-v">${formatEUR(sm)}</span></div>`;
-  }).join("");
-
-  document.getElementById("pay-summary").innerHTML = `
-    <div class="sec-label">Unter dem Strich</div>
-    <div class="pay-open">${open.length?formatEUR(sumEffektiv):"—"}</div>
-    <div class="pay-sub">${open.length?"Ca. offen (alle außer „Abgerechnet“)":"Keine offenen Schichten"}</div>
-    ${open.length?lines.map(([k,v])=>`<div class="pay-row"><span class="pay-row-k">${k}</span><span class="pay-row-v">${v}</span></div>`).join(""):""}
-    ${open.length && brHtml?`<div class="pay-break"><div class="pay-break-title">Nach Regel (nur offen)</div>${brHtml}</div>`:""}
-    <p class="pay-foot">Ungefähre Prognose. Ein Zuschlag pro Schicht (Feiertag vor Sonntag vor Nacht). NRW-Feiertage per Datum; „FT“ auf der Karte zum Überschreiben.</p>
-  `;
-}
-
-// ─── Actions ──────────────────────────────────────────────────────────────
 function selTyp(typ) {
   state.selTyp = typ;
   renderTypGrid();
@@ -1078,32 +589,32 @@ function selTyp(typ) {
 
 function setFilter(f) {
   state.filter = f;
-  render();
+  renderFilter();
+  renderList();
 }
 
 function handleAdd() {
-  const datum = document.getElementById("datum-input").value.trim();
-  if (!/^\d{2}\.\d{2}\.\d{2}$/.test(datum)) {
-    showToast("Datum im Format TT.MM.JJ eingeben", "err"); return;
+  const datum = document.getElementById("datum-input").value;
+  if (!datum || !/^\d{4}-\d{2}-\d{2}$/.test(datum)) {
+    showToast("Bitte ein Datum auswählen", "err"); return;
   }
   const info = getInfo(state.selTyp);
-  state.schichten.unshift({ id: uid(), datum, typ: state.selTyp, beginn: info.beginn, ende: info.ende, status: "ausstehend", feiertagOverride: null });
+  state.schichten.unshift({
+    id: uid(),
+    datum,
+    typ: state.selTyp,
+    beginn: info.beginn,
+    ende: info.ende,
+    status: "ausstehend"
+  });
   save(); render();
   showToast("Schicht hinzugefügt ✓");
 }
 
 function cycleStatus(id) {
   const s = state.schichten.find(x=>x.id===id);
-  if (!s || !STATUS[s.status]) return;
-  s.status = STATUS[s.status].next;
-  save(); render();
-}
-
-function cycleFeiertag(id) {
-  const s = state.schichten.find(x=>x.id===id);
   if (!s) return;
-  const cur = s.feiertagOverride;
-  s.feiertagOverride = cur===null?true:cur===true?false:null;
+  s.status = STATUS[s.status].next;
   save(); render();
 }
 
@@ -1114,38 +625,15 @@ async function handleDownload(id) {
   renderList();
   try {
     await downloadDocx(s);
-    if (s.status==="ausstehend") { s.status="generiert"; save(); }
-    showToast(`${s.datum} heruntergeladen ✓`);
+    if (s.status === "ausstehend") s.status = "mail";
+    save(); render();
+    showToast(`${isoToDe(s.datum)} heruntergeladen ✓`);
   } catch(e) {
     showToast("Fehler: "+e.message, "err");
   } finally {
     state.loading = null;
     render();
   }
-}
-
-function openPreview(id) {
-  const s = state.schichten.find(x=>x.id===id);
-  if (!s) return;
-  state.previewId = id;
-  const rows = [
-    ["Name","Nils Weinandy"],["PV-Nr.","887043"],
-    ["Produktionsdatum",s.datum],["Arbeitsbeginn",s.beginn],
-    ["Arbeitsende",s.ende],["Art der Tätigkeit",s.typ],
-  ];
-  document.getElementById("preview-rows").innerHTML = rows.map(([k,v])=>`
-    <div class="prev-row">
-      <span class="prev-k">${k}</span>
-      <span class="prev-v">${v}</span>
-    </div>`).join("");
-  document.getElementById("preview-filename").textContent = "📄 "+filename(s.datum);
-  openSheet("preview");
-}
-
-function downloadFromPreview() {
-  const id = state.previewId;
-  closeSheet("preview");
-  if (id) handleDownload(id);
 }
 
 function askDelete(id) {
@@ -1162,15 +650,9 @@ function confirmDelete() {
   showToast("Schicht gelöscht", "err");
 }
 
-// ─── Sheet helpers ─────────────────────────────────────────────────────────
-function openSheet(name) {
-  document.getElementById("overlay-"+name).classList.add("show");
-}
-function closeSheet(name) {
-  document.getElementById("overlay-"+name).classList.remove("show");
-}
+function openSheet(name) { document.getElementById("overlay-"+name).classList.add("show"); }
+function closeSheet(name) { document.getElementById("overlay-"+name).classList.remove("show"); }
 
-// ─── Toast ────────────────────────────────────────────────────────────────
 let toastTimer;
 function showToast(msg, type="ok") {
   const el = document.getElementById("toast");
@@ -1181,32 +663,21 @@ function showToast(msg, type="ok") {
   toastTimer = setTimeout(()=>el.classList.remove("show"), 3000);
 }
 
-// ─── Datum Picker ─────────────────────────────────────────────────────────
-function syncDatumPickerFromInput() {
-  const inp = document.getElementById("datum-input");
-  const pk = document.getElementById("datum-picker");
-  const iso = deDatumToIso(inp.value.trim());
-  if (iso) pk.value = iso;
-}
-function syncDatumInputFromPicker() {
-  const inp = document.getElementById("datum-input");
-  const pk = document.getElementById("datum-picker");
-  if (pk.value) inp.value = isoToDeDatum(pk.value);
+function updateHeaderClock() {
+  const el = document.getElementById("header-clock");
+  if (!el) return;
+  const d = new Date();
+  const p = n => String(n).padStart(2,"0");
+  el.textContent =
+    APP_BUILD_STAMP +
+    " · " +
+    p(d.getHours()) + ":" + p(d.getMinutes()) + ":" + p(d.getSeconds());
 }
 
-// ─── Init ─────────────────────────────────────────────────────────────────
 load();
-document.getElementById("datum-input").value = today();
-syncDatumPickerFromInput();
-document.getElementById("datum-input").addEventListener("input", syncDatumPickerFromInput);
-document.getElementById("datum-input").addEventListener("change", syncDatumPickerFromInput);
-document.getElementById("datum-picker").addEventListener("change", syncDatumInputFromPicker);
-document.getElementById("datum-cal-btn").addEventListener("click", () => {
-  syncDatumPickerFromInput();
-  const pk = document.getElementById("datum-picker");
-  if (typeof pk.showPicker === "function") pk.showPicker();
-  else pk.focus();
-});
+document.getElementById("datum-input").value = todayISO();
+updateHeaderClock();
+setInterval(updateHeaderClock, 1000);
 render();
 </script>
 </body>
