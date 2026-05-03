@@ -101,8 +101,8 @@
   /* ── Stats ── */
   .stats {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 8px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
     margin-bottom: 12px;
   }
   .stat-card {
@@ -114,12 +114,12 @@
   }
   .stat-n {
     font-family: var(--font-mono);
-    font-size: 28px;
+    font-size: 21px;
     font-weight: 600;
     line-height: 1;
   }
   .stat-l {
-    font-size: 10px;
+    font-size: 9px;
     color: var(--light);
     margin-top: 3px;
     font-weight: 600;
@@ -133,6 +133,9 @@
     grid-template-columns: repeat(3, 1fr);
     gap: 5px;
     margin-bottom: 12px;
+  }
+  @media (min-width: 420px) {
+    .typ-grid { grid-template-columns: repeat(4, 1fr); }
   }
   .typ-btn {
     background: #f8fafc;
@@ -197,6 +200,110 @@
     -webkit-appearance: none;
   }
   .d-input:focus { border-color: #93c5fd; }
+
+  .d-row {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+    margin-bottom: 12px;
+  }
+  .d-row .d-input { flex: 1; margin-bottom: 0; min-width: 0; }
+  .btn-cal {
+    flex-shrink: 0;
+    width: 46px;
+    background: #eff6ff;
+    border: 1.5px solid #bfdbfe;
+    border-radius: 8px;
+    font-size: 18px;
+    cursor: pointer;
+    line-height: 1;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .btn-cal:active { opacity: 0.85; }
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0,0,0,0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .s-pay {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 4px;
+    font-weight: 600;
+  }
+  .s-ft-pill {
+    border: 1.5px solid var(--border);
+    border-radius: 16px;
+    padding: 3px 8px;
+    font-size: 10px;
+    font-weight: 700;
+    cursor: pointer;
+    background: #f8fafc;
+    color: var(--muted);
+    font-family: var(--font-sans);
+    -webkit-tap-highlight-color: transparent;
+    margin-left: 8px;
+    flex-shrink: 0;
+  }
+  .s-ft-pill.ft-yes { border-color: #a78bfa; color: #5b21b6; background: #ede9fe; }
+  .s-ft-pill.ft-no { border-color: #cbd5e1; color: #475569; background: #f1f5f9; }
+  .s-ft-pill.ft-auto { border-color: #bae6fd; color: #0369a1; background: #e0f2fe; }
+  .s-top-row2 {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: 4px 0;
+    margin-bottom: 4px;
+  }
+
+  .pay-card .pay-open {
+    font-family: var(--font-mono);
+    font-size: 26px;
+    font-weight: 600;
+    color: var(--amber);
+    margin-bottom: 4px;
+  }
+  .pay-card .pay-sub { font-size: 12px; color: var(--muted); margin-bottom: 14px; }
+  .pay-break {
+    border-top: 1px solid var(--border);
+    padding-top: 12px;
+    margin-top: 4px;
+  }
+  .pay-break-title {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--light);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .pay-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 13px;
+    padding: 5px 0;
+    border-bottom: 1px solid #f1f5f9;
+    gap: 12px;
+  }
+  .pay-row:last-child { border-bottom: none; }
+  .pay-row-k { color: var(--muted); font-weight: 600; font-size: 12px; }
+  .pay-row-v { font-family: var(--font-mono); font-weight: 600; flex-shrink: 0; }
+  .pay-foot {
+    font-size: 11px;
+    color: var(--light);
+    margin-top: 12px;
+    line-height: 1.45;
+  }
 
   /* ── Buttons ── */
   .btn-primary {
@@ -511,7 +618,6 @@
     <div>
       <div class="h-eye">WDR · Prognose</div>
       <h1 class="h-title">Tageseinsatz&shy;nachweise</h1>
-      <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:#334155;margin-top:4px">Build: 03.05.26 · 18:10</div>
     </div>
     <div class="h-meta">
       <div class="h-name">Nils Weinandy</div>
@@ -532,8 +638,12 @@
       <span>⏱</span>
       <span class="zeit-val" id="zeit-preview">–</span>
     </div>
-    <label class="d-label">Datum (TT.MM.JJ)</label>
-    <input class="d-input" id="datum-input" placeholder="03.05.26" maxlength="8" inputmode="numeric"/>
+    <label class="d-label">Datum</label>
+    <div class="d-row">
+      <input class="d-input" id="datum-input" placeholder="03.05.26" maxlength="8" inputmode="numeric" autocomplete="off"/>
+      <button type="button" class="btn-cal" id="datum-cal-btn" title="Kalender">📅</button>
+    </div>
+    <input type="date" class="visually-hidden" id="datum-picker" tabindex="-1"/>
     <button class="btn-primary" onclick="handleAdd()">+ Schicht hinzufügen</button>
   </div>
 
@@ -542,6 +652,8 @@
 
   <!-- List -->
   <div class="list" id="list"></div>
+
+  <div class="card pay-card" id="pay-summary"></div>
 </main>
 
 <!-- Preview Sheet -->
@@ -594,12 +706,18 @@ const SCHICHTEN = [
   { typ: "ZePrA WE S", beginn: "10:00", ende: "18:12" },
   { typ: "Apaka 7",    beginn: "07:00", ende: "15:12" },
   { typ: "Apaka 11",   beginn: "11:00", ende: "19:12" },
+  { typ: "Nachschicht", beginn: "22:45", ende: "06:57" },
 ];
 
-const STORAGE_KEY = "wdr-v4";
+const STORAGE_KEY = "wdr-v5";
+const STORAGE_KEY_LEGACY = "wdr-v4";
+
+const TAG_SATZ = 245;
+
 const STATUS = {
   ausstehend: { label:"Ausstehend", color:"#b45309", bg:"#fef3c7", dot:"#f59e0b", next:"generiert" },
-  generiert:  { label:"Generiert",  color:"#1d4ed8", bg:"#dbeafe", dot:"#3b82f6", next:"abgerechnet" },
+  generiert:  { label:"Generiert",  color:"#1d4ed8", bg:"#dbeafe", dot:"#3b82f6", next:"mail_raus" },
+  mail_raus:  { label:"Mail raus", color:"#6d28d9", bg:"#ede9fe", dot:"#7c3aed", next:"abgerechnet" },
   abgerechnet:{ label:"Abgerechnet",color:"#065f46", bg:"#d1fae5", dot:"#10b981", next:"ausstehend" },
 };
 
@@ -613,8 +731,22 @@ let state = {
 };
 
 // ─── Persist ──────────────────────────────────────────────────────────────
+function normalizeSchichten(arr) {
+  return arr.map(s => {
+    let st = s.status;
+    if (!STATUS[st]) st = "ausstehend";
+    let fo = s.feiertagOverride;
+    if (fo !== true && fo !== false) fo = null;
+    return { ...s, status: st, feiertagOverride: fo };
+  });
+}
+
 function load() {
-  try { const r = localStorage.getItem(STORAGE_KEY); if (r) state.schichten = JSON.parse(r); } catch {}
+  try {
+    let raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) raw = localStorage.getItem(STORAGE_KEY_LEGACY);
+    if (raw) state.schichten = normalizeSchichten(JSON.parse(raw));
+  } catch {}
 }
 function save() {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state.schichten)); } catch {}
@@ -630,6 +762,109 @@ function parseDate(s) {
   const [dd,mm,yy] = s.split(".");
   return new Date(2000+parseInt(yy), parseInt(mm)-1, parseInt(dd));
 }
+function formatEUR(n) {
+  return new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" }).format(n);
+}
+function deDatumToIso(s) {
+  if (!/^\d{2}\.\d{2}\.\d{2}$/.test(s)) return "";
+  const [dd,mm,yy] = s.split(".").map(x=>parseInt(x,10));
+  const y = 2000 + yy;
+  return y+"-"+String(mm).padStart(2,"0")+"-"+String(dd).padStart(2,"0");
+}
+function isoToDeDatum(iso) {
+  if (!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) return "";
+  const [y,m,d] = iso.split("-").map(x=>parseInt(x,10));
+  return [d,m,y%100].map(n=>String(n).padStart(2,"0")).join(".");
+}
+
+function dateKey(d) {
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+}
+
+function easterSunday(y) {
+  const a = y % 19, b = Math.floor(y / 100), c = y % 100;
+  const d = Math.floor(b / 4), e = b % 4;
+  const f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4), k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const mo = Math.floor((h + l - 7 * m + 114) / 31);
+  const day = ((h + l - 7 * m + 114) % 31) + 1;
+  return new Date(y, mo - 1, day);
+}
+
+const nrwHolidayCache = {};
+function buildNRWHolidaySet(year) {
+  const es = easterSunday(year);
+  const addDays = (dt, n) => { const x = new Date(dt); x.setDate(x.getDate()+n); return x; };
+  const keys = new Set();
+  const add = dt => keys.add(dateKey(dt));
+  add(new Date(year, 0, 1));
+  add(addDays(es, -2));
+  add(addDays(es, 1));
+  add(new Date(year, 4, 1));
+  add(addDays(es, 39));
+  add(addDays(es, 50));
+  add(new Date(year, 9, 3));
+  add(new Date(year, 11, 25));
+  add(new Date(year, 11, 26));
+  return keys;
+}
+function isNRWHoliday(date) {
+  const y = date.getFullYear();
+  if (!nrwHolidayCache[y]) nrwHolidayCache[y] = buildNRWHolidaySet(y);
+  return nrwHolidayCache[y].has(dateKey(date));
+}
+
+function parseHM(t) {
+  const [h,m] = t.split(":").map(Number);
+  return (h||0)*60+(m||0);
+}
+function intervalsOverlap(a0,a1,b0,b1) {
+  return Math.max(a0,b0) < Math.min(a1,b1);
+}
+function shiftOverlapsNight(beginn, ende) {
+  const B = parseHM(beginn);
+  const E = parseHM(ende);
+  if (E > B) {
+    return intervalsOverlap(B,E,0,6*60) || intervalsOverlap(B,E,22*60,1440);
+  }
+  const extEnd = 1440 + E;
+  const ns = 22*60, ne = 1440 + 6*60;
+  return Math.max(B, ns) < Math.min(extEnd, ne);
+}
+
+function effectiveFeiertag(schicht, d) {
+  const o = schicht.feiertagOverride;
+  if (o === true) return true;
+  if (o === false) return false;
+  return isNRWHoliday(d);
+}
+
+/** Ein Zuschlag pro Schicht: Feiertag > Sonntag > Nacht > normal */
+function computePay(schicht) {
+  const d = parseDate(schicht.datum);
+  const sunday = d.getDay() === 0;
+  const ft = effectiveFeiertag(schicht, d);
+  const night = shiftOverlapsNight(schicht.beginn, schicht.ende);
+
+  let rule = "normal";
+  let factor = 1;
+  let label = "Basis";
+
+  if (ft) {
+    rule = "feiertag"; factor = 2; label = "Feiertag (+100%)";
+  } else if (sunday) {
+    rule = "sonntag"; factor = 1.5; label = "Sonntag (+50%)";
+  } else if (night) {
+    rule = "nacht"; factor = 1.25; label = "Nacht (+25%)";
+  }
+
+  const amount = Math.round(TAG_SATZ * factor * 100) / 100;
+  return { amount, factor, rule, label };
+}
+
 function getInfo(typ) { return SCHICHTEN.find(s=>s.typ===typ)||SCHICHTEN[0]; }
 function filename(datum) { return datum.replace(/\./g,"_")+"_Tageseinsatznachweis_NilsWeinandy.docx"; }
 
@@ -653,68 +888,29 @@ async function downloadDocx(schicht) {
   if (!docFile) throw new Error("word/document.xml nicht im Template gefunden.");
   let xml = await docFile.async("string");
 
-  // 3. Word splits text across multiple <w:r> runs internally.
-  // We merge adjacent runs within each table cell first, then replace placeholders.
-  // This handles cases like XX + BEGINN + XX being stored as 3 separate runs.
-
-  function mergeRunsInCells(x) {
-    // For each table cell, concatenate all w:t text into the first run,
-    // but only if the combined text contains one of our placeholders.
-    return x.replace(/(<w:tc>[\s\S]*?<\/w:tc>)/g, cell => {
-      // Extract all runs with their text
-      const runTexts = [];
-      const runRegex = /<w:r[ >][\s\S]*?<\/w:r>/g;
-      let combined = "";
-      const runs = [...cell.matchAll(/<w:r([ >][\s\S]*?)<\/w:r>/g)];
-      if (runs.length < 2) return cell; // nothing to merge
-
-      // Get all text content from w:t tags in this cell
-      const allText = [...cell.matchAll(/<w:t[^>]*>([^<]*)<\/w:t>/g)]
-        .map(m => m[1]).join("");
-
-      // Only merge if a placeholder is present in combined text
-      const placeholders = ["XXDATUMXX","XXBEGINNXX","XXENDEXX","XXTYPXX"];
-      if (!placeholders.some(p => allText.includes(p))) return cell;
-
-      // Find the placeholder in combined text
-      const ph = placeholders.find(p => allText.includes(p));
-
-      // Replace ALL w:t content in this cell: put placeholder in first w:t, empty the rest
-      let replaced = false;
-      let newCell = cell.replace(/<w:t[^>]*>[^<]*<\/w:t>/g, match => {
-        if (!replaced) { replaced = true; return `<w:t>${allText}</w:t>`; }
-        return `<w:t></w:t>`;
-      });
-      return newCell;
-    });
-  }
-
-  xml = mergeRunsInCells(xml);
-
+  // 3. Replace placeholders {{DATUM}}, {{BEGINN}}, {{ENDE}}, {{TYP}}
+  // These were placed in the template by make_template.py
   const esc = s => String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 
-  const hasDatum  = xml.includes("XXDATUMXX");
-  const hasBeginn = xml.includes("XXBEGINNXX");
-  const hasEnde   = xml.includes("XXENDEXX");
-  const hasTyp    = xml.includes("XXTYPXX");
+  const hasDatum  = xml.includes("{{DATUM}}");
+  const hasBeginn = xml.includes("{{BEGINN}}");
+  const hasEnde   = xml.includes("{{ENDE}}");
+  const hasTyp    = xml.includes("{{TYP}}");
 
   if (!hasDatum || !hasBeginn || !hasEnde || !hasTyp) {
     const missing = [
-      !hasDatum  && "XXDATUMXX",
-      !hasBeginn && "XXBEGINNXX",
-      !hasEnde   && "XXENDEXX",
-      !hasTyp    && "XXTYPXX",
+      !hasDatum  && "{{DATUM}}",
+      !hasBeginn && "{{BEGINN}}",
+      !hasEnde   && "{{ENDE}}",
+      !hasTyp    && "{{TYP}}",
     ].filter(Boolean).join(", ");
-    // Debug: show what text IS in the cells
-    const cellTexts = [...xml.matchAll(/<w:t[^>]*>([^<]{2,})<\/w:t>/g)]
-      .map(m=>m[1]).filter(t=>t.includes("XX")).join(" | ");
-    throw new Error(`Platzhalter nicht gefunden: ${missing}\nGefundene XX-Texte: ${cellTexts||"keine"}`);
+    throw new Error(`Platzhalter fehlen im Template: ${missing}\n\nBitte make_template.py auf dem Mac ausführen und die neue template.docx hochladen.`);
   }
 
-  xml = xml.replaceAll("XXDATUMXX",  esc(datum));
-  xml = xml.replaceAll("XXBEGINNXX", esc(beginn));
-  xml = xml.replaceAll("XXENDEXX",   esc(ende));
-  xml = xml.replaceAll("XXTYPXX",    esc(typ));
+  xml = xml.replaceAll("{{DATUM}}",  esc(datum));
+  xml = xml.replaceAll("{{BEGINN}}", esc(beginn));
+  xml = xml.replaceAll("{{ENDE}}",   esc(ende));
+  xml = xml.replaceAll("{{TYP}}",    esc(typ));
 
   // 5. Write back and rezip
   zip.file("word/document.xml", xml);
@@ -742,14 +938,16 @@ function render() {
   renderZeit();
   renderFilter();
   renderList();
+  renderPaySummary();
 }
 
 function renderStats() {
   const s = state.schichten;
   const cfg = [
-    ["Offen",     s.filter(x=>x.status==="ausstehend").length, "#d97706"],
-    ["Generiert", s.filter(x=>x.status==="generiert").length,  "#2563eb"],
-    ["Erledigt",  s.filter(x=>x.status==="abgerechnet").length,"#059669"],
+    ["Offen",       s.filter(x=>x.status==="ausstehend").length, "#d97706"],
+    ["Generiert",   s.filter(x=>x.status==="generiert").length,  "#2563eb"],
+    ["Mail raus",   s.filter(x=>x.status==="mail_raus").length, "#7c3aed"],
+    ["Erledigt",    s.filter(x=>x.status==="abgerechnet").length,"#059669"],
   ];
   document.getElementById("stats").innerHTML = cfg.map(([l,n,c])=>`
     <div class="stat-card">
@@ -776,9 +974,10 @@ function renderFilter() {
     alle: s.length,
     ausstehend: s.filter(x=>x.status==="ausstehend").length,
     generiert:  s.filter(x=>x.status==="generiert").length,
+    mail_raus:  s.filter(x=>x.status==="mail_raus").length,
     abgerechnet:s.filter(x=>x.status==="abgerechnet").length,
   };
-  const labels = { alle:"Alle", ausstehend:"Ausstehend", generiert:"Generiert", abgerechnet:"Abgerechnet" };
+  const labels = { alle:"Alle", ausstehend:"Ausstehend", generiert:"Generiert", mail_raus:"Mail raus", abgerechnet:"Abgerechnet" };
   document.getElementById("filter-row").innerHTML = Object.keys(counts).map(f=>`
     <button class="f-btn${state.filter===f?" active":""}" onclick="setFilter('${f}')">
       ${labels[f]}<span class="f-badge">${counts[f]}</span>
@@ -798,27 +997,76 @@ function renderList() {
   document.getElementById("list").innerHTML = filtered.map(s=>{
     const st = STATUS[s.status];
     const isLoad = state.loading===s.id;
+    const pay = computePay(s);
+    const fo = s.feiertagOverride;
+    const ftClass = fo===true?"ft-yes":fo===false?"ft-no":"ft-auto";
+    const ftTxt = fo===true?"FT an":fo===false?"FT aus":"FT Auto";
     return `
     <div class="s-card">
       <div class="s-top">
         <span class="s-datum">${s.datum}</span>
-        <button class="s-pill" style="color:${st.color};background:${st.bg}" onclick="cycleStatus('${s.id}')">
+        <button type="button" class="s-pill" style="color:${st.color};background:${st.bg}" onclick="cycleStatus('${s.id}')">
           <span class="s-dot" style="background:${st.dot}"></span>${st.label}
         </button>
+      </div>
+      <div class="s-top-row2">
+        <span class="s-pay">${s.status==="abgerechnet"?"—":formatEUR(pay.amount)+" · "+pay.label}</span>
+        <button type="button" class="s-ft-pill ${ftClass}" onclick="cycleFeiertag('${s.id}')" title="Feiertag NRW Auto/Manuell">${ftTxt}</button>
       </div>
       <div class="s-mid">
         <span class="s-typ">${s.typ}</span>
         <span class="s-zeit">${s.beginn}–${s.ende}</span>
       </div>
       <div class="s-acts">
-        <button class="btn-outline" onclick="openPreview('${s.id}')">Vorschau</button>
-        <button class="btn-dl" onclick="handleDownload('${s.id}')" ${isLoad?"disabled":""} style="opacity:${isLoad?0.7:1}">
+        <button type="button" class="btn-outline" onclick="openPreview('${s.id}')">Vorschau</button>
+        <button type="button" class="btn-dl" onclick="handleDownload('${s.id}')" ${isLoad?"disabled":""} style="opacity:${isLoad?0.7:1}">
           ${isLoad?'<span class="spin"></span> Erstelle…':'⬇ DOCX'}
         </button>
-        <button class="btn-del" onclick="askDelete('${s.id}')">✕</button>
+        <button type="button" class="btn-del" onclick="askDelete('${s.id}')">✕</button>
       </div>
     </div>`;
   }).join("");
+}
+
+function renderPaySummary() {
+  const open = state.schichten.filter(s=>s.status!=="abgerechnet");
+  const breakdown = { feiertag: [], sonntag: [], nacht: [], normal: [] };
+  let sumBasis = 0;
+  let sumEffektiv = 0;
+  for (const s of open) {
+    const p = computePay(s);
+    sumBasis += TAG_SATZ;
+    sumEffektiv += p.amount;
+    breakdown[p.rule].push(p.amount);
+  }
+  const sumZuschlag = Math.round((sumEffektiv - sumBasis) * 100) / 100;
+
+  const lines = [
+    ["Basis ("+open.length+"× "+formatEUR(TAG_SATZ)+")", formatEUR(sumBasis)],
+    ["Zuschläge (netto)", formatEUR(sumZuschlag)],
+    ["Summe offen (geschätzt)", formatEUR(sumEffektiv)],
+  ];
+
+  const br = [
+    ["Feiertag (+100%)", breakdown.feiertag],
+    ["Sonntag (+50%)", breakdown.sonntag],
+    ["Nacht (+25%)", breakdown.nacht],
+    ["Ohne Zuschlag", breakdown.normal],
+  ];
+
+  const brHtml = br.filter(([,arr])=>arr.length).map(([name,arr])=>{
+    const sm = arr.reduce((a,b)=>a+b,0);
+    return `<div class="pay-row"><span class="pay-row-k">${name} · ${arr.length}×</span><span class="pay-row-v">${formatEUR(sm)}</span></div>`;
+  }).join("");
+
+  document.getElementById("pay-summary").innerHTML = `
+    <div class="sec-label">Unter dem Strich</div>
+    <div class="pay-open">${open.length?formatEUR(sumEffektiv):"—"}</div>
+    <div class="pay-sub">${open.length?"Ca. offen (alle außer „Abgerechnet“)":"Keine offenen Schichten"}</div>
+    ${open.length?lines.map(([k,v])=>`<div class="pay-row"><span class="pay-row-k">${k}</span><span class="pay-row-v">${v}</span></div>`).join(""):""}
+    ${open.length && brHtml?`<div class="pay-break"><div class="pay-break-title">Nach Regel (nur offen)</div>${brHtml}</div>`:""}
+    <p class="pay-foot">Ungefähre Prognose. Ein Zuschlag pro Schicht (Feiertag vor Sonntag vor Nacht). NRW-Feiertage per Datum; „FT“ auf der Karte zum Überschreiben.</p>
+  `;
 }
 
 // ─── Actions ──────────────────────────────────────────────────────────────
@@ -830,8 +1078,7 @@ function selTyp(typ) {
 
 function setFilter(f) {
   state.filter = f;
-  renderFilter();
-  renderList();
+  render();
 }
 
 function handleAdd() {
@@ -840,16 +1087,24 @@ function handleAdd() {
     showToast("Datum im Format TT.MM.JJ eingeben", "err"); return;
   }
   const info = getInfo(state.selTyp);
-  state.schichten.unshift({ id: uid(), datum, typ: state.selTyp, beginn: info.beginn, ende: info.ende, status: "ausstehend" });
+  state.schichten.unshift({ id: uid(), datum, typ: state.selTyp, beginn: info.beginn, ende: info.ende, status: "ausstehend", feiertagOverride: null });
   save(); render();
   showToast("Schicht hinzugefügt ✓");
 }
 
 function cycleStatus(id) {
   const s = state.schichten.find(x=>x.id===id);
-  if (!s) return;
+  if (!s || !STATUS[s.status]) return;
   s.status = STATUS[s.status].next;
-  save(); renderStats(); renderFilter(); renderList();
+  save(); render();
+}
+
+function cycleFeiertag(id) {
+  const s = state.schichten.find(x=>x.id===id);
+  if (!s) return;
+  const cur = s.feiertagOverride;
+  s.feiertagOverride = cur===null?true:cur===true?false:null;
+  save(); render();
 }
 
 async function handleDownload(id) {
@@ -926,9 +1181,32 @@ function showToast(msg, type="ok") {
   toastTimer = setTimeout(()=>el.classList.remove("show"), 3000);
 }
 
+// ─── Datum Picker ─────────────────────────────────────────────────────────
+function syncDatumPickerFromInput() {
+  const inp = document.getElementById("datum-input");
+  const pk = document.getElementById("datum-picker");
+  const iso = deDatumToIso(inp.value.trim());
+  if (iso) pk.value = iso;
+}
+function syncDatumInputFromPicker() {
+  const inp = document.getElementById("datum-input");
+  const pk = document.getElementById("datum-picker");
+  if (pk.value) inp.value = isoToDeDatum(pk.value);
+}
+
 // ─── Init ─────────────────────────────────────────────────────────────────
 load();
 document.getElementById("datum-input").value = today();
+syncDatumPickerFromInput();
+document.getElementById("datum-input").addEventListener("input", syncDatumPickerFromInput);
+document.getElementById("datum-input").addEventListener("change", syncDatumPickerFromInput);
+document.getElementById("datum-picker").addEventListener("change", syncDatumInputFromPicker);
+document.getElementById("datum-cal-btn").addEventListener("click", () => {
+  syncDatumPickerFromInput();
+  const pk = document.getElementById("datum-picker");
+  if (typeof pk.showPicker === "function") pk.showPicker();
+  else pk.focus();
+});
 render();
 </script>
 </body>
