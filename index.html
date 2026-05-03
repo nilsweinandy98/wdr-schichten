@@ -159,9 +159,64 @@
   .f-btn.active .f-badge { background: rgba(255,255,255,0.2); }
 
   .list { display: flex; flex-direction: column; gap: 8px; }
+  .list-hint {
+    font-size: 12px;
+    color: var(--muted);
+    padding: 8px 10px;
+    background: #f8fafc;
+    border-radius: 10px;
+    border: 1px dashed var(--border);
+    margin-bottom: 10px;
+    line-height: 1.4;
+  }
   .empty { text-align: center; color: var(--light); padding: 40px 0; font-size: 13px; }
 
+  .honorar-detail-card .h-detail-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: 14px;
+  }
+  .honorar-detail-card .h-detail-row:last-child { border-bottom: none; }
+  .honorar-detail-card .h-detail-row.sum {
+    margin-top: 4px;
+    padding-top: 14px;
+    border-top: 2px solid var(--border);
+    border-bottom: none;
+    font-weight: 700;
+    font-size: 15px;
+  }
+  .honorar-detail-card .h-detail-k { color: var(--muted); max-width: 72%; }
+  .honorar-detail-card .h-detail-v { font-family: var(--font-mono); font-weight: 600; flex-shrink: 0; }
+  .honorar-detail-card .h-detail-note {
+    font-size: 12px;
+    color: var(--light);
+    margin-top: 14px;
+    line-height: 1.45;
+  }
+
+  .daten-card .daten-p { font-size: 13px; color: var(--muted); line-height: 1.5; margin-bottom: 12px; }
+  .daten-card .daten-p strong { color: var(--text); }
+  .daten-card code.mono { font-family: var(--font-mono); font-size: 11px; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; color: var(--text); }
+  .daten-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+  .daten-file-btn { cursor: pointer; display: inline-flex; align-items: center; }
+
   .s-card { background: var(--card); border-radius: 14px; padding: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.07); animation: fadeUp 0.15s ease; }
+  .s-card.s-done {
+    opacity: 0.72;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    box-shadow: none;
+  }
+  .s-card.s-done .s-datum,
+  .s-card.s-done .s-typ,
+  .s-card.s-done .s-zeit,
+  .s-card.s-done .s-pay { color: var(--muted); }
+  .s-card.s-done .s-pay-val { color: var(--muted); }
+  .s-card.s-done .s-pay-bonus { color: #64748b; }
   @keyframes fadeUp { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
   .s-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; gap: 8px; }
   .s-datum { font-family: var(--font-mono); font-size: 17px; font-weight: 600; color: var(--text); }
@@ -272,7 +327,20 @@
 
   <div class="filter-row" id="filter-row"></div>
 
+  <div id="list-hint" class="list-hint" style="display:none"></div>
   <div class="list" id="list"></div>
+
+  <div class="card honorar-detail-card" id="honorar-detail"></div>
+
+  <div class="card daten-card">
+    <div class="sec-label">Daten &amp; Sicherung</div>
+    <p class="daten-p">Die Schichten werden nur <strong>lokal in diesem Browser</strong> gespeichert, unter dem Schlüssel <code class="mono">wdr-v5</code> im <code class="mono">localStorage</code>. Es gibt <strong>keinen Server</strong> und <strong>kein Login</strong> — niemand synchronisiert die Daten automatisch. Sie gehen verloren, wenn du Website-Daten löschst, den Browser wechselst oder die Datei auf einem anderen Gerät öffnest.</p>
+    <p class="daten-p"><strong>Sichern:</strong> regelmäßig ein JSON-Backup herunterladen und z. B. in iCloud Drive / „Akten“ ablegen. Bei Bedarf wieder einspielen (ersetzt die aktuelle Liste).</p>
+    <div class="daten-row">
+      <button type="button" class="btn-outline" onclick="exportSchichtenBackup()">Backup speichern (.json)</button>
+      <label class="btn-outline daten-file-btn">Backup einspielen<input type="file" accept="application/json,.json" class="visually-hidden" id="import-schichten-input"/></label>
+    </div>
+  </div>
 </main>
 
 <div class="overlay" id="overlay-delete" onclick="closeSheet('delete')">
@@ -323,6 +391,8 @@ const FEIERTAGE_NRW = new Set([
 ]);
 
 const STORAGE_KEY = "wdr-v5";
+/** Bei Ansicht „Alle“: nur so viele zuletzt abgerechnete Schichten mit anzeigen */
+const SHOW_LAST_ABGERECHNET = 3;
 const TEMPLATE_URL = "https://raw.githubusercontent.com/nilsweinandy98/wdr-schichten/main/template.docx";
 
 const STATUS = {
@@ -431,6 +501,46 @@ function syncDEFromPicker() {
 }
 
 function getInfo(typ) { return SCHICHTEN.find(s=>s.typ===typ)||SCHICHTEN[0]; }
+
+function sortedByDatumAsc(arr) {
+  return [...arr].sort((a,b) => isoToDate(a.datum) - isoToDate(b.datum));
+}
+
+/** Liste für aktuellen Filter: chronologisch aufsteigend (älteste oben). „Alle“ = offen + nur die N zuletzt Abgerechneten. */
+function buildListForFilter(filter) {
+  const asc = sortedByDatumAsc(state.schichten);
+  if (filter === "ausstehend") return asc.filter(s => s.status === "ausstehend");
+  if (filter === "mail") return asc.filter(s => s.status === "mail");
+  if (filter === "abgerechnet") return asc.filter(s => s.status === "abgerechnet");
+  const open = asc.filter(s => s.status !== "abgerechnet");
+  const done = asc.filter(s => s.status === "abgerechnet");
+  const doneNeuesteZuerst = [...done].sort((a,b) => isoToDate(b.datum) - isoToDate(a.datum));
+  const letzte = doneNeuesteZuerst.slice(0, SHOW_LAST_ABGERECHNET);
+  return sortedByDatumAsc([...open, ...letzte]);
+}
+
+function hiddenAbgerechnetCount() {
+  const n = state.schichten.filter(s => s.status === "abgerechnet").length;
+  return Math.max(0, n - SHOW_LAST_ABGERECHNET);
+}
+
+function aggregateHonorarOpen() {
+  const open = state.schichten.filter(s => s.status !== "abgerechnet");
+  let grund = 0;
+  let zuFeiertag = 0;
+  let zuSonntag = 0;
+  let zuNacht = 0;
+  for (const s of open) {
+    const h = calcHonorar(s);
+    grund += h.grund;
+    if (h.hol) zuFeiertag += h.sonZuschlag;
+    else if (h.sun) zuSonntag += h.sonZuschlag;
+    zuNacht += h.nachtZuschlag;
+  }
+  const zuschlaege = zuFeiertag + zuSonntag + zuNacht;
+  const total = grund + zuschlaege;
+  return { open, grund, zuFeiertag, zuSonntag, zuNacht, zuschlaege, total };
+}
 
 function nachtStunden(beginn, ende) {
   const [bh,bm] = beginn.split(":").map(Number);
@@ -559,6 +669,7 @@ function render() {
   renderZeit();
   renderFilter();
   renderList();
+  renderHonorarDetail();
 }
 
 function renderEarnings() {
@@ -619,11 +730,45 @@ function renderFilter() {
   `).join("");
 }
 
+function renderHonorarDetail() {
+  const box = document.getElementById("honorar-detail");
+  if (!box) return;
+  const a = aggregateHonorarOpen();
+  if (a.open.length === 0) {
+    box.innerHTML = `
+      <div class="sec-label">Honorar offen (Detail)</div>
+      <p class="h-detail-note" style="margin-top:0">Keine offenen Schichten.</p>`;
+    return;
+  }
+  const rows = [
+    `<div class="h-detail-row"><span class="h-detail-k">Grundhonorar (${a.open.length}× ${fmtEuro(HONORAR_TAG)} €)</span><span class="h-detail-v">${fmtEuro(a.grund)} €</span></div>`,
+  ];
+  if (a.zuFeiertag > 0) rows.push(`<div class="h-detail-row"><span class="h-detail-k">Zuschlag Feiertag NRW (+100&nbsp;% auf Grund)</span><span class="h-detail-v">${fmtEuro(a.zuFeiertag)} €</span></div>`);
+  if (a.zuSonntag > 0) rows.push(`<div class="h-detail-row"><span class="h-detail-k">Zuschlag Sonntag (+50&nbsp;% auf Grund)</span><span class="h-detail-v">${fmtEuro(a.zuSonntag)} €</span></div>`);
+  if (a.zuNacht > 0) rows.push(`<div class="h-detail-row"><span class="h-detail-k">Zuschlag Nacht (+25&nbsp;% auf Nachtstunden)</span><span class="h-detail-v">${fmtEuro(a.zuNacht)} €</span></div>`);
+  rows.push(`<div class="h-detail-row"><span class="h-detail-k">Zuschläge gesamt</span><span class="h-detail-v">${fmtEuro(a.zuschlaege)} €</span></div>`);
+  rows.push(`<div class="h-detail-row sum"><span class="h-detail-k">Summe offen</span><span class="h-detail-v">${fmtEuro(a.total)} €</span></div>`);
+  box.innerHTML = `
+    <div class="sec-label">Honorar offen (Detail)</div>
+    <p class="h-detail-note" style="margin-top:0;margin-bottom:4px">Nur Schichten ohne „Abgerechnet“. Entspricht der Berechnung auf den Karten.</p>
+    ${rows.join("")}
+    <p class="h-detail-note">Übersicht zur Orientierung, keine rechts- oder steuerliche Beratung.</p>`;
+}
+
 function renderList() {
-  const sorted = [...state.schichten].sort((a,b)=>{
-    return isoToDate(b.datum) - isoToDate(a.datum);
-  });
-  const filtered = sorted.filter(s=>state.filter==="alle"||s.status===state.filter);
+  const hintEl = document.getElementById("list-hint");
+  const filtered = buildListForFilter(state.filter);
+
+  if (hintEl) {
+    const hid = hiddenAbgerechnetCount();
+    if (state.filter === "alle" && hid > 0) {
+      hintEl.style.display = "block";
+      hintEl.textContent =
+        `Chronologisch (älteste oben). Unter „Alle“ siehst du alle offenen Schichten plus nur die ${SHOW_LAST_ABGERECHNET} zuletzt abgerechneten. ${hid} ältere abgerechnete Schicht${hid===1?" ist":"en sind"} ausgeblendet — Filter „Abgerechnet“ zeigt alle.`;
+    } else {
+      hintEl.style.display = "none";
+    }
+  }
 
   if (filtered.length===0) {
     document.getElementById("list").innerHTML = `<div class="empty">Keine Schichten${state.filter!=="alle"?` mit Status „${state.filter}"`:""}.</div>`;
@@ -634,6 +779,7 @@ function renderList() {
     const st = STATUS[s.status];
     const isLoad = state.loading===s.id;
     const h = calcHonorar(s);
+    const doneCls = s.status === "abgerechnet" ? " s-done" : "";
 
     const tags = [];
     if (h.hol) tags.push(`<span class="s-tag s-tag-holiday">Feiertag +100%</span>`);
@@ -641,7 +787,7 @@ function renderList() {
     if (h.nachtH > 0) tags.push(`<span class="s-tag s-tag-night">Nacht +25%</span>`);
 
     return `
-    <div class="s-card">
+    <div class="s-card${doneCls}">
       <div class="s-top">
         <div>
           <span class="s-datum">${isoToDe(s.datum)}</span>
@@ -681,8 +827,51 @@ function selTyp(typ) {
 
 function setFilter(f) {
   state.filter = f;
-  renderFilter();
-  renderList();
+  render();
+}
+
+function exportSchichtenBackup() {
+  const payload = {
+    app: "wdr-schichten",
+    storageKey: STORAGE_KEY,
+    exportedISO: todayISO(),
+    schichten: state.schichten,
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "wdr-schichten-backup-" + todayISO() + ".json";
+  a.style.display = "none";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast("Backup heruntergeladen ✓");
+}
+
+function importSchichtenBackup(file) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(reader.result);
+      const raw = Array.isArray(data) ? data : data.schichten;
+      if (!Array.isArray(raw)) throw new Error("Ungültig");
+      state.schichten = raw.map(s => {
+        const iso = datumToISO(s.datum);
+        let status = s.status;
+        if (status === "generiert") status = "mail";
+        if (!STATUS[status]) status = "ausstehend";
+        return { ...s, datum: iso, status };
+      });
+      save();
+      render();
+      showToast("Backup eingespielt ✓");
+    } catch (e) {
+      showToast("Import fehlgeschlagen – Datei prüfen", "err");
+    }
+  };
+  reader.readAsText(file);
 }
 
 function handleAdd() {
@@ -782,6 +971,15 @@ load();
     syncPickerFromDE();
     if (typeof pk.showPicker === "function") pk.showPicker();
     else pk.focus();
+  });
+})();
+(function wireBackupImport() {
+  const inp = document.getElementById("import-schichten-input");
+  if (!inp) return;
+  inp.addEventListener("change", e => {
+    const f = e.target.files && e.target.files[0];
+    if (f) importSchichtenBackup(f);
+    e.target.value = "";
   });
 })();
 updateHeaderClock();
