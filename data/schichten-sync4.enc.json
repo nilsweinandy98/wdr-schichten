@@ -1,1 +1,87 @@
-{"v":2,"pbkdf2Iterations":210000,"salt":"bThaUuBC2OaT+TpHHI+WqQ==","iv":"VVr2C+UMpJayE67m","ciphertext":"xerHYxE3EO6XW5tJ1wFWBVh3l2Y7Scskpu0yKlCPcPTIea53kyfN74/HchqZ7Y4fWJpudPjq3kn0Gk7TrTIyW1GlvpLQmVYR6YvvioDkoYpQKYN0xKMgSo9acf15stYKeXHsogqG2x7Hhcj7Q4URthk2ZS31XbPpM52/8qyZoCQqj47OQC29KChGbpuBYfZa31jzicdR+EY2V9ktTWnqBv2PHNAWBAO+Gm50Rlv+EVSsXKifn80jRBiGDWc5du9nWi1HuC/2a65CMgDwDNHu255k6x/csjlRkuCFQza36IYutLSuSnQyFCQa6/SvAFdLmfQxY8Wvj8sTvYzmOTeVoir4Xh6EOa2n9GyZ/yzcYV+oyswr94Eb7RHHJaTfmoJJN6RJ7ayWo9BtoaUTKBgmMLEo3Dn79gz/mxV/5p8nGUr3deUhFDYUp16tfYIds010DWa8mIuVStrTKqsi4OhhN1oacJzfpheCZ6jePxtKt5MEj3KTTMVe9CHBgGYCk/1eD8cwzOSAKkHT255fTjNI804QO404qSwCOzYcsGRIujJPZ4lMcJv+YhdAYxKvppqn/eBsYiPE8Hmn6vXzj4UdO8SmWDpcz0e5wYfCFolCYBsSgLX7mwSxyH1ZCiS78qMIF6/EwNui0NBzvhM0qfvfMG0s1KKCe+8B9h25Y0CZobqwFeAUfMFLdmYDnZu3vxp5yKBTqq+06A4i1AoM0e3+lDA9D+H1hvAn/dL1Vbw/nHQD9fvstUljWaon0IS6g260M5xCnLTWISYKF68k2xFg07bgR1srfhkFsq5BH9JHoIo8rrScIOOOand4iWZljTpa/lyVNRF0GmMmppWSvsMLA3PXFvCRmYL+18sBZgSGNjg8otoOCTrBNxIyz13ekC3Gz9K04xzJnc1V52tH+EwqvCuO6z/E3JjV8Ni88WJcdakfUZI0TDzMgYqlfxapC6Lj3v19qM0ecugYhmpM9iUKRhicaBDc/SJqQPon5827qlOdCtkg3UVbaG+GYvVxRhivOzlRwVeFzaCfTYPF2+WppYOajEgOuXMMHXnDBb53/3kAapzNZDyC8Iama4q31tupseh56FSeb7gX4ZtsM7CtKmoD4OmhCiKW3Atb11k06IyFCe0AA8mLVf6F84VUXg07EViqY5Bcc0gS68oyP8Buh4TrDcfHvlZa3gNqAuThk8B8xvVRTMyySD87U2OeVR5ZCo2mAi901xKeUSkrnqR3BJgugSKPDt9vWw6TC+X6oDoiEGQME8b4ZKjae+fJsemxGGS7Ipzz+Frvl7Rp7eS2rQV7d8vi9UWRDTe9rNj9dFVONt4R2ZXwGJ1IaLce9gOsM2h5eJnHGltdaupaQs6fXgHf3RjeqcMNzmLwNABS88teg3nULeLX4KBwz1Qu405rTYclMJ1et8twf9SeGzpuOApIklT0/9jCUPTbQgqylDYXLq53LGGr8+vbBbmWNwKSQCufdbDbgo7ROJwelvdVmoKfG+YXaQBOFVHKyi55E4Yme4hjnmmtokNJiwHZww7llBfgXDx3Sc9Huej2IWAcU47b62jwAHINZ81iSnhSJ+351gQIS2S/DKPxp9FJBtN+B7N7synifFoX7wUgaL50Vg==","meta":{"app":"wdr-schichten","savedISO":"2026-05-03"}}
+{
+  "app": "wdr-schichten",
+  "format": "schichten-plain",
+  "savedISO": "2026-05-03",
+  "schichten": [
+    {
+      "id": "5dzs9a2d",
+      "datum": "2026-05-03",
+      "typ": "ZePrA 1",
+      "beginn": "06:30",
+      "ende": "14:42",
+      "status": "ausstehend"
+    },
+    {
+      "id": "9nvnjboe",
+      "datum": "2026-03-17",
+      "typ": "ZePrA 4",
+      "beginn": "14:15",
+      "ende": "22:27",
+      "status": "abgerechnet",
+      "feiertagOverride": null
+    },
+    {
+      "id": "63epcdnl",
+      "datum": "2026-03-24",
+      "typ": "ZePrA 2",
+      "beginn": "08:00",
+      "ende": "15:12",
+      "status": "abgerechnet",
+      "feiertagOverride": null
+    },
+    {
+      "id": "wuxwc8zq",
+      "datum": "2026-03-29",
+      "typ": "ZePrA WE 3",
+      "beginn": "15:00",
+      "ende": "23:12",
+      "status": "abgerechnet",
+      "feiertagOverride": null
+    },
+    {
+      "id": "r4pgh8os",
+      "datum": "2026-04-07",
+      "typ": "ZePrA 1",
+      "beginn": "06:30",
+      "ende": "14:42",
+      "status": "ausstehend",
+      "feiertagOverride": null
+    },
+    {
+      "id": "p9nuphih",
+      "datum": "2026-04-10",
+      "typ": "ZePrA 2",
+      "beginn": "08:00",
+      "ende": "15:12",
+      "status": "ausstehend",
+      "feiertagOverride": null
+    },
+    {
+      "id": "ok5ljkdq",
+      "datum": "2026-04-14",
+      "typ": "ZePrA 5",
+      "beginn": "15:00",
+      "ende": "23:12",
+      "status": "ausstehend",
+      "feiertagOverride": null
+    },
+    {
+      "id": "2ufuhsam",
+      "datum": "2026-05-03",
+      "typ": "ZePrA WE 2",
+      "beginn": "12:00",
+      "ende": "20:12",
+      "status": "ausstehend",
+      "feiertagOverride": null
+    },
+    {
+      "id": "tvsalcgx",
+      "datum": "2026-05-02",
+      "typ": "ZePrA WE 2",
+      "beginn": "12:00",
+      "ende": "20:12",
+      "status": "ausstehend",
+      "feiertagOverride": null
+    }
+  ]
+}
