@@ -511,6 +511,7 @@
     <div>
       <div class="h-eye">WDR · Prognose</div>
       <h1 class="h-title">Tageseinsatz&shy;nachweise</h1>
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:#334155;margin-top:4px">Build: 03.05.26 · 18:10</div>
     </div>
     <div class="h-meta">
       <div class="h-name">Nils Weinandy</div>
@@ -656,25 +657,25 @@ async function downloadDocx(schicht) {
   // These were placed in the template by make_template.py
   const esc = s => String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 
-  const hasDatum  = xml.includes("{{DATUM}}");
-  const hasBeginn = xml.includes("{{BEGINN}}");
-  const hasEnde   = xml.includes("{{ENDE}}");
-  const hasTyp    = xml.includes("{{TYP}}");
+  const hasDatum  = xml.includes("XXDATUMXX");
+  const hasBeginn = xml.includes("XXBEGINNXX");
+  const hasEnde   = xml.includes("XXENDEXX");
+  const hasTyp    = xml.includes("XXTYPXX");
 
   if (!hasDatum || !hasBeginn || !hasEnde || !hasTyp) {
     const missing = [
-      !hasDatum  && "{{DATUM}}",
-      !hasBeginn && "{{BEGINN}}",
-      !hasEnde   && "{{ENDE}}",
-      !hasTyp    && "{{TYP}}",
+      !hasDatum  && "XXDATUMXX",
+      !hasBeginn && "XXBEGINNXX",
+      !hasEnde   && "XXENDEXX",
+      !hasTyp    && "XXTYPXX",
     ].filter(Boolean).join(", ");
-    throw new Error(`Platzhalter fehlen im Template: ${missing}\n\nBitte make_template.py auf dem Mac ausführen und die neue template.docx hochladen.`);
+    throw new Error(`Platzhalter fehlen im Template: ${missing} — bitte template.docx prüfen.`);
   }
 
-  xml = xml.replaceAll("{{DATUM}}",  esc(datum));
-  xml = xml.replaceAll("{{BEGINN}}", esc(beginn));
-  xml = xml.replaceAll("{{ENDE}}",   esc(ende));
-  xml = xml.replaceAll("{{TYP}}",    esc(typ));
+  xml = xml.replaceAll("XXDATUMXX",  esc(datum));
+  xml = xml.replaceAll("XXBEGINNXX", esc(beginn));
+  xml = xml.replaceAll("XXENDEXX",   esc(ende));
+  xml = xml.replaceAll("XXTYPXX",    esc(typ));
 
   // 5. Write back and rezip
   zip.file("word/document.xml", xml);
