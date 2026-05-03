@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="WDR Schichten"/>
+<title>WDR Tageseinsatznachweise</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Syne:wght@700;800&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f1f5f9;
+    --card: #ffffff;
+    --dark: #0c1426;
+    --text: #0f172a;
+    --muted: #64748b;
+    --light: #94a3b8;
+    --border: #e2e8f0;
+    --blue: #2563eb;
+    --amber: #d97706;
+    --green: #059669;
+    --red: #ef4444;
+    --font-sans: 'IBM Plex Sans', system-ui, sans-serif;
+    --font-mono: 'IBM Plex Mono', monospace;
+    --font-display: 'Syne', sans-serif;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── Header ── */
+  header {
+    background: var(--dark);
+    padding: 20px 16px 18px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  .h-wrap {
+    max-width: 560px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+  }
+  .h-eye {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: #3b82f6;
+    letter-spacing: 2.5px;
+    font-weight: 600;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+  }
+  .h-title {
+    font-family: var(--font-display);
+    font-size: 21px;
+    font-weight: 800;
+    color: #f8fafc;
+    letter-spacing: -0.5px;
+    line-height: 1.2;
+  }
+  .h-meta { text-align: right; }
+  .h-name { font-size: 13px; font-weight: 600; color: #cbd5e1; }
+  .h-pv { font-family: var(--font-mono); font-size: 11px; color: #475569; margin-top: 2px; }
+
+  /* ── Layout ── */
+  main {
+    max-width: 560px;
+    margin: 0 auto;
+    padding: 14px 12px 100px;
+  }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--card);
+    border-radius: 16px;
+    padding: 18px;
+    margin-bottom: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.07);
+  }
+  .sec-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--light);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  /* ── Stats ── */
+  .stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .stat-card {
+    background: var(--card);
+    border-radius: 12px;
+    padding: 13px 8px;
+    text-align: center;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+  }
+  .stat-n {
+    font-family: var(--font-mono);
+    font-size: 28px;
+    font-weight: 600;
+    line-height: 1;
+  }
+  .stat-l {
+    font-size: 10px;
+    color: var(--light);
+    margin-top: 3px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+
+  /* ── Schichttyp Grid ── */
+  .typ-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 5px;
+    margin-bottom: 12px;
+  }
+  .typ-btn {
+    background: #f8fafc;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 4px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    color: var(--muted);
+    line-height: 1.3;
+    text-align: center;
+    transition: all 0.1s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .typ-btn.active {
+    background: var(--dark);
+    border-color: var(--dark);
+    color: #fff;
+  }
+  .typ-btn:active { transform: scale(0.96); }
+
+  /* ── Zeit Preview ── */
+  .zeit-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 8px;
+    padding: 9px 12px;
+    margin-bottom: 12px;
+  }
+  .zeit-val {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: #1d4ed8;
+    font-weight: 600;
+  }
+
+  /* ── Datum Input ── */
+  .d-label {
+    display: block;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--light);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 5px;
+  }
+  .d-input {
+    width: 100%;
+    background: #f8fafc;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 16px;
+    font-family: var(--font-mono);
+    color: var(--text);
+    outline: none;
+    margin-bottom: 12px;
+    -webkit-appearance: none;
+  }
+  .d-input:focus { border-color: #93c5fd; }
+
+  /* ── Buttons ── */
+  .btn-primary {
+    width: 100%;
+    background: var(--dark);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 13px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: var(--font-sans);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .btn-primary:active { opacity: 0.85; }
+
+  .btn-outline {
+    background: transparent;
+    border: 1.5px solid var(--border);
+    border-radius: 7px;
+    padding: 7px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    color: var(--muted);
+    font-family: var(--font-sans);
+    white-space: nowrap;
+  }
+
+  .btn-dl {
+    background: var(--dark);
+    border: none;
+    border-radius: 7px;
+    padding: 7px 14px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex: 1;
+    justify-content: center;
+    font-family: var(--font-sans);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .btn-dl:active { opacity: 0.85; }
+  .btn-dl:disabled { opacity: 0.65; }
+
+  .btn-del {
+    background: #fff0f0;
+    border: 1.5px solid #fecaca;
+    border-radius: 7px;
+    padding: 7px 10px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    color: var(--red);
+    font-family: var(--font-sans);
+  }
+  .btn-danger {
+    background: var(--red);
+    color: #fff;
+    border: none;
+    border-radius: 7px;
+    padding: 7px 16px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: var(--font-sans);
+    flex: 1;
+  }
+
+  /* ── Filter ── */
+  .filter-row {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 10px;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .filter-row::-webkit-scrollbar { display: none; }
+  .f-btn {
+    background: var(--card);
+    border: 1.5px solid var(--border);
+    border-radius: 20px;
+    padding: 6px 12px;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    color: var(--muted);
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-family: var(--font-sans);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .f-btn.active {
+    background: var(--dark);
+    color: #fff;
+    border-color: var(--dark);
+  }
+  .f-badge {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    background: rgba(0,0,0,0.08);
+    border-radius: 10px;
+    padding: 1px 5px;
+  }
+  .f-btn.active .f-badge { background: rgba(255,255,255,0.2); }
+
+  /* ── Schicht Cards ── */
+  .list { display: flex; flex-direction: column; gap: 8px; }
+  .empty { text-align: center; color: var(--light); padding: 40px 0; font-size: 13px; }
+
+  .s-card {
+    background: var(--card);
+    border-radius: 14px;
+    padding: 14px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.07);
+    animation: fadeUp 0.15s ease;
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(5px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .s-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+  }
+  .s-datum {
+    font-family: var(--font-mono);
+    font-size: 19px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .s-pill {
+    border: none;
+    border-radius: 20px;
+    padding: 4px 10px;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-family: var(--font-sans);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .s-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+
+  .s-mid {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+  .s-typ { font-size: 14px; font-weight: 700; }
+  .s-zeit { font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
+
+  .s-acts { display: flex; gap: 6px; }
+
+  /* ── Spinner ── */
+  .spin {
+    display: inline-block;
+    width: 11px; height: 11px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    flex-shrink: 0;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Modal / Sheet ── */
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    z-index: 100;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+  }
+  .overlay.show { opacity: 1; pointer-events: all; }
+  .sheet {
+    background: #fff;
+    border-radius: 20px 20px 0 0;
+    padding: 10px 20px 40px;
+    width: 100%;
+    max-width: 580px;
+    box-shadow: 0 -8px 40px rgba(0,0,0,0.2);
+    max-height: 90vh;
+    overflow-y: auto;
+    transform: translateY(20px);
+    transition: transform 0.25s ease;
+    -webkit-overflow-scrolling: touch;
+  }
+  .overlay.show .sheet { transform: translateY(0); }
+
+  .handle {
+    width: 36px; height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    margin: 0 auto 16px;
+  }
+  .sh-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+  .sh-title { font-size: 16px; font-weight: 700; font-family: var(--font-display); }
+  .sh-close {
+    background: #f1f5f9;
+    border: none;
+    border-radius: 20px;
+    width: 28px; height: 28px;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .sh-acts { display: flex; gap: 8px; margin-top: 16px; }
+
+  /* ── Preview Doc ── */
+  .prev-doc {
+    background: #f8fafc;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 10px;
+  }
+  .prev-doc-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--muted);
+    padding: 10px 12px;
+    background: #f1f5f9;
+    border-bottom: 1px solid var(--border);
+    text-align: center;
+  }
+  .prev-row { display: flex; border-bottom: 1px solid #f1f5f9; }
+  .prev-k {
+    width: 150px;
+    padding: 7px 10px;
+    font-weight: 600;
+    color: var(--muted);
+    background: #f8fafc;
+    flex-shrink: 0;
+    font-size: 11px;
+  }
+  .prev-v {
+    padding: 7px 10px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text);
+    font-weight: 500;
+  }
+  .prev-file {
+    font-size: 10px;
+    color: var(--light);
+    font-family: var(--font-mono);
+    word-break: break-all;
+    margin-bottom: 4px;
+    line-height: 1.5;
+  }
+
+  /* ── Toast ── */
+  .toast {
+    position: fixed;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    color: #fff;
+    padding: 11px 20px;
+    border-radius: 30px;
+    font-size: 13px;
+    font-weight: 600;
+    z-index: 200;
+    white-space: nowrap;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s, transform 0.2s;
+    font-family: var(--font-sans);
+  }
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  /* ── iOS safe area ── */
+  @supports (padding-bottom: env(safe-area-inset-bottom)) {
+    main { padding-bottom: calc(100px + env(safe-area-inset-bottom)); }
+    .sheet { padding-bottom: calc(40px + env(safe-area-inset-bottom)); }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="h-wrap">
+    <div>
+      <div class="h-eye">WDR · Prognose</div>
+      <h1 class="h-title">Tageseinsatz&shy;nachweise</h1>
+    </div>
+    <div class="h-meta">
+      <div class="h-name">Nils Weinandy</div>
+      <div class="h-pv">PV 887043</div>
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- Stats -->
+  <div class="stats" id="stats"></div>
+
+  <!-- Add form -->
+  <div class="card">
+    <div class="sec-label">Neue Schicht</div>
+    <div class="typ-grid" id="typ-grid"></div>
+    <div class="zeit-row">
+      <span>⏱</span>
+      <span class="zeit-val" id="zeit-preview">–</span>
+    </div>
+    <label class="d-label">Datum (TT.MM.JJ)</label>
+    <input class="d-input" id="datum-input" placeholder="03.05.26" maxlength="8" inputmode="numeric"/>
+    <button class="btn-primary" onclick="handleAdd()">+ Schicht hinzufügen</button>
+  </div>
+
+  <!-- Filter -->
+  <div class="filter-row" id="filter-row"></div>
+
+  <!-- List -->
+  <div class="list" id="list"></div>
+</main>
+
+<!-- Preview Sheet -->
+<div class="overlay" id="overlay-preview" onclick="closeSheet('preview')">
+  <div class="sheet" onclick="event.stopPropagation()">
+    <div class="handle"></div>
+    <div class="sh-head">
+      <span class="sh-title">Vorschau</span>
+      <button class="sh-close" onclick="closeSheet('preview')">✕</button>
+    </div>
+    <div class="prev-doc">
+      <div class="prev-doc-title">Tageseinsatznachweis von prognosemitarbeiter*innen</div>
+      <div id="preview-rows"></div>
+    </div>
+    <div class="prev-file" id="preview-filename"></div>
+    <div class="sh-acts">
+      <button class="btn-outline" onclick="closeSheet('preview')">Schließen</button>
+      <button class="btn-dl" id="preview-dl-btn" onclick="downloadFromPreview()">⬇ DOCX herunterladen</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Confirm Sheet -->
+<div class="overlay" id="overlay-delete" onclick="closeSheet('delete')">
+  <div class="sheet" onclick="event.stopPropagation()" style="padding:10px 20px 40px">
+    <div class="handle"></div>
+    <p style="font-size:16px;font-weight:700;margin:8px 0">Schicht löschen?</p>
+    <p style="font-size:14px;color:#64748b;margin-bottom:24px">Diese Aktion kann nicht rückgängig gemacht werden.</p>
+    <div style="display:flex;gap:8px">
+      <button class="btn-outline" style="flex:1" onclick="closeSheet('delete')">Abbrechen</button>
+      <button class="btn-danger" onclick="confirmDelete()">Löschen</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── Data ─────────────────────────────────────────────────────────────────
+const SCHICHTEN = [
+  { typ: "ZePrA 1",    beginn: "06:30", ende: "14:42" },
+  { typ: "ZePrA 2",    beginn: "08:00", ende: "15:12" },
+  { typ: "ZePrA 4",    beginn: "14:15", ende: "22:27" },
+  { typ: "ZePrA 5",    beginn: "15:00", ende: "23:12" },
+  { typ: "ZePrA MLD",  beginn: "11:00", ende: "19:12" },
+  { typ: "ZePrA WE 1", beginn: "08:00", ende: "14:42" },
+  { typ: "ZePrA WE 2", beginn: "12:00", ende: "20:12" },
+  { typ: "ZePrA WE 3", beginn: "15:00", ende: "23:12" },
+  { typ: "ZePrA WE S", beginn: "10:00", ende: "18:12" },
+  { typ: "Apaka 7",    beginn: "07:00", ende: "15:12" },
+  { typ: "Apaka 11",   beginn: "11:00", ende: "19:12" },
+];
+
+const STORAGE_KEY = "wdr-v4";
+const STATUS = {
+  ausstehend: { label:"Ausstehend", color:"#b45309", bg:"#fef3c7", dot:"#f59e0b", next:"generiert" },
+  generiert:  { label:"Generiert",  color:"#1d4ed8", bg:"#dbeafe", dot:"#3b82f6", next:"abgerechnet" },
+  abgerechnet:{ label:"Abgerechnet",color:"#065f46", bg:"#d1fae5", dot:"#10b981", next:"ausstehend" },
+};
+
+let state = {
+  schichten: [],
+  selTyp: SCHICHTEN[0].typ,
+  filter: "alle",
+  previewId: null,
+  deleteId: null,
+  loading: null,
+};
+
+// ─── Persist ──────────────────────────────────────────────────────────────
+function load() {
+  try { const r = localStorage.getItem(STORAGE_KEY); if (r) state.schichten = JSON.parse(r); } catch {}
+}
+function save() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state.schichten)); } catch {}
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────
+function uid() { return Math.random().toString(36).slice(2,10); }
+function today() {
+  const d = new Date();
+  return [d.getDate(), d.getMonth()+1, d.getFullYear()%100].map(n=>String(n).padStart(2,"0")).join(".");
+}
+function parseDate(s) {
+  const [dd,mm,yy] = s.split(".");
+  return new Date(2000+parseInt(yy), parseInt(mm)-1, parseInt(dd));
+}
+function getInfo(typ) { return SCHICHTEN.find(s=>s.typ===typ)||SCHICHTEN[0]; }
+function filename(datum) { return datum.replace(/\./g,"_")+"_Tageseinsatznachweis_NilsWeinandy.docx"; }
+
+// ─── DOCX via Template ────────────────────────────────────────────────────
+// Loads the real template.docx from GitHub, unzips it, replaces only the
+// 4 data fields in document.xml, rezips and downloads.
+
+const TEMPLATE_URL = "https://raw.githubusercontent.com/nilsweinandy98/wdr-schichten/main/template.docx";
+
+async function downloadDocx(schicht) {
+  const { datum, beginn, ende, typ } = schicht;
+
+  // 1. Fetch template
+  const resp = await fetch(TEMPLATE_URL);
+  if (!resp.ok) throw new Error("Template konnte nicht geladen werden (" + resp.status + "). Ist template.docx im Repository?");
+  const arrayBuffer = await resp.arrayBuffer();
+
+  // 2. Unzip
+  const zip = await JSZip.loadAsync(arrayBuffer);
+  const docFile = zip.file("word/document.xml");
+  if (!docFile) throw new Error("word/document.xml nicht im Template gefunden.");
+  let xml = await docFile.async("string");
+
+  // 3. Find the data row in the shift table and replace values.
+  // The template has one filled data row with the original date/time/typ.
+  // Strategy: replace the FIRST data row that contains a date pattern DD.MM.YY
+  // We do a targeted replacement of the 5-cell data row.
+
+  // Find existing values from template to replace
+  // Date pattern: any DD.MM.YY in a table cell
+  const datumMatch = xml.match(/<w:t>(\d{2}\.\d{2}\.\d{2})<\/w:t>/);
+  if (!datumMatch) throw new Error("Kein Datum im Template gefunden. Bitte template.docx prüfen.");
+  const oldDatum = datumMatch[1];
+
+  // Find beginn/ende: look for time patterns HH:MM near the datum row
+  const timeMatches = [...xml.matchAll(/<w:t>(\d{2}:\d{2})<\/w:t>/g)];
+  if (timeMatches.length < 2) throw new Error("Keine Zeiten im Template gefunden.");
+  const oldBeginn = timeMatches[0][1];
+  const oldEnde   = timeMatches[1][1];
+
+  // Find typ: the cell after the two time cells — search for known shift types
+  const typMatch = xml.match(/<w:t>(ZePrA[^<]+|Apaka[^<]+)<\/w:t>/);
+  if (!typMatch) throw new Error("Kein Schichttyp im Template gefunden.");
+  const oldTyp = typMatch[1];
+
+  // 4. Replace — only first occurrence of each to avoid touching header rows
+  const esc = s => String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+
+  xml = xml.replace(`<w:t>${oldDatum}</w:t>`, `<w:t>${esc(datum)}</w:t>`);
+  xml = xml.replace(`<w:t>${oldBeginn}</w:t>`, `<w:t>${esc(beginn)}</w:t>`);
+  xml = xml.replace(`<w:t>${oldEnde}</w:t>`, `<w:t>${esc(ende)}</w:t>`);
+  xml = xml.replace(`<w:t>${oldTyp}</w:t>`, `<w:t>${esc(typ)}</w:t>`);
+
+  // 5. Write back and rezip
+  zip.file("word/document.xml", xml);
+  const blob = await zip.generateAsync({
+    type: "blob",
+    mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    compression: "DEFLATE",
+    compressionOptions: { level: 6 }
+  });
+
+  // 6. Download
+  const fname = datum.replace(/\./g,"_") + "_Tageseinsatznachweis_NilsWeinandy.docx";
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = fname; a.style.display = "none";
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+
+// ─── Render ───────────────────────────────────────────────────────────────
+function render() {
+  renderStats();
+  renderTypGrid();
+  renderZeit();
+  renderFilter();
+  renderList();
+}
+
+function renderStats() {
+  const s = state.schichten;
+  const cfg = [
+    ["Offen",     s.filter(x=>x.status==="ausstehend").length, "#d97706"],
+    ["Generiert", s.filter(x=>x.status==="generiert").length,  "#2563eb"],
+    ["Erledigt",  s.filter(x=>x.status==="abgerechnet").length,"#059669"],
+  ];
+  document.getElementById("stats").innerHTML = cfg.map(([l,n,c])=>`
+    <div class="stat-card">
+      <div class="stat-n" style="color:${c}">${n}</div>
+      <div class="stat-l">${l}</div>
+    </div>
+  `).join("");
+}
+
+function renderTypGrid() {
+  document.getElementById("typ-grid").innerHTML = SCHICHTEN.map(s=>`
+    <button class="typ-btn${state.selTyp===s.typ?" active":""}" onclick="selTyp('${s.typ}')">${s.typ}</button>
+  `).join("");
+}
+
+function renderZeit() {
+  const info = getInfo(state.selTyp);
+  document.getElementById("zeit-preview").textContent = `${info.beginn} – ${info.ende} Uhr`;
+}
+
+function renderFilter() {
+  const s = state.schichten;
+  const counts = {
+    alle: s.length,
+    ausstehend: s.filter(x=>x.status==="ausstehend").length,
+    generiert:  s.filter(x=>x.status==="generiert").length,
+    abgerechnet:s.filter(x=>x.status==="abgerechnet").length,
+  };
+  const labels = { alle:"Alle", ausstehend:"Ausstehend", generiert:"Generiert", abgerechnet:"Abgerechnet" };
+  document.getElementById("filter-row").innerHTML = Object.keys(counts).map(f=>`
+    <button class="f-btn${state.filter===f?" active":""}" onclick="setFilter('${f}')">
+      ${labels[f]}<span class="f-badge">${counts[f]}</span>
+    </button>
+  `).join("");
+}
+
+function renderList() {
+  const sorted = [...state.schichten].sort((a,b)=>parseDate(b.datum)-parseDate(a.datum));
+  const filtered = sorted.filter(s=>state.filter==="alle"||s.status===state.filter);
+
+  if (filtered.length===0) {
+    document.getElementById("list").innerHTML = `<div class="empty">Keine Schichten${state.filter!=="alle"?` mit Status „${state.filter}"`:""}.</div>`;
+    return;
+  }
+
+  document.getElementById("list").innerHTML = filtered.map(s=>{
+    const st = STATUS[s.status];
+    const isLoad = state.loading===s.id;
+    return `
+    <div class="s-card">
+      <div class="s-top">
+        <span class="s-datum">${s.datum}</span>
+        <button class="s-pill" style="color:${st.color};background:${st.bg}" onclick="cycleStatus('${s.id}')">
+          <span class="s-dot" style="background:${st.dot}"></span>${st.label}
+        </button>
+      </div>
+      <div class="s-mid">
+        <span class="s-typ">${s.typ}</span>
+        <span class="s-zeit">${s.beginn}–${s.ende}</span>
+      </div>
+      <div class="s-acts">
+        <button class="btn-outline" onclick="openPreview('${s.id}')">Vorschau</button>
+        <button class="btn-dl" onclick="handleDownload('${s.id}')" ${isLoad?"disabled":""} style="opacity:${isLoad?0.7:1}">
+          ${isLoad?'<span class="spin"></span> Erstelle…':'⬇ DOCX'}
+        </button>
+        <button class="btn-del" onclick="askDelete('${s.id}')">✕</button>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+// ─── Actions ──────────────────────────────────────────────────────────────
+function selTyp(typ) {
+  state.selTyp = typ;
+  renderTypGrid();
+  renderZeit();
+}
+
+function setFilter(f) {
+  state.filter = f;
+  renderFilter();
+  renderList();
+}
+
+function handleAdd() {
+  const datum = document.getElementById("datum-input").value.trim();
+  if (!/^\d{2}\.\d{2}\.\d{2}$/.test(datum)) {
+    showToast("Datum im Format TT.MM.JJ eingeben", "err"); return;
+  }
+  const info = getInfo(state.selTyp);
+  state.schichten.unshift({ id: uid(), datum, typ: state.selTyp, beginn: info.beginn, ende: info.ende, status: "ausstehend" });
+  save(); render();
+  showToast("Schicht hinzugefügt ✓");
+}
+
+function cycleStatus(id) {
+  const s = state.schichten.find(x=>x.id===id);
+  if (!s) return;
+  s.status = STATUS[s.status].next;
+  save(); renderStats(); renderFilter(); renderList();
+}
+
+async function handleDownload(id) {
+  const s = state.schichten.find(x=>x.id===id);
+  if (!s || state.loading) return;
+  state.loading = id;
+  renderList();
+  try {
+    await downloadDocx(s);
+    if (s.status==="ausstehend") { s.status="generiert"; save(); }
+    showToast(`${s.datum} heruntergeladen ✓`);
+  } catch(e) {
+    showToast("Fehler: "+e.message, "err");
+  } finally {
+    state.loading = null;
+    render();
+  }
+}
+
+function openPreview(id) {
+  const s = state.schichten.find(x=>x.id===id);
+  if (!s) return;
+  state.previewId = id;
+  const rows = [
+    ["Name","Nils Weinandy"],["PV-Nr.","887043"],
+    ["Produktionsdatum",s.datum],["Arbeitsbeginn",s.beginn],
+    ["Arbeitsende",s.ende],["Art der Tätigkeit",s.typ],
+  ];
+  document.getElementById("preview-rows").innerHTML = rows.map(([k,v])=>`
+    <div class="prev-row">
+      <span class="prev-k">${k}</span>
+      <span class="prev-v">${v}</span>
+    </div>`).join("");
+  document.getElementById("preview-filename").textContent = "📄 "+filename(s.datum);
+  openSheet("preview");
+}
+
+function downloadFromPreview() {
+  const id = state.previewId;
+  closeSheet("preview");
+  if (id) handleDownload(id);
+}
+
+function askDelete(id) {
+  state.deleteId = id;
+  openSheet("delete");
+}
+
+function confirmDelete() {
+  if (!state.deleteId) return;
+  state.schichten = state.schichten.filter(s=>s.id!==state.deleteId);
+  state.deleteId = null;
+  closeSheet("delete");
+  save(); render();
+  showToast("Schicht gelöscht", "err");
+}
+
+// ─── Sheet helpers ─────────────────────────────────────────────────────────
+function openSheet(name) {
+  document.getElementById("overlay-"+name).classList.add("show");
+}
+function closeSheet(name) {
+  document.getElementById("overlay-"+name).classList.remove("show");
+}
+
+// ─── Toast ────────────────────────────────────────────────────────────────
+let toastTimer;
+function showToast(msg, type="ok") {
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.style.background = type==="err" ? "#ef4444" : "#0c1426";
+  el.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>el.classList.remove("show"), 3000);
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────
+load();
+document.getElementById("datum-input").value = today();
+render();
+</script>
+</body>
+</html>
