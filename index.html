@@ -1565,7 +1565,13 @@ function mergeRunsInCells(x) {
   });
 }
 
-async function buildDocxBlobFromBuffer(arrayBuffer, schicht, fnameSuffix) {
+/** z. B. 14_04_26_Tageseinsatznachweis_NilsWeinandy.docx — bei mehreren am Tag: …_2.docx */
+function docxDownloadFilename(datumDE, sameDayIndex) {
+  const stem = datumDE.replace(/\./g, "_") + "_Tageseinsatznachweis_NilsWeinandy";
+  return sameDayIndex <= 1 ? stem + ".docx" : stem + "_" + sameDayIndex + ".docx";
+}
+
+async function buildDocxBlobFromBuffer(arrayBuffer, schicht, fname) {
   const { datum, beginn, ende, typ } = schicht;
   const zip = await JSZip.loadAsync(arrayBuffer);
   const docFile = zip.file("word/document.xml");
@@ -1596,12 +1602,6 @@ async function buildDocxBlobFromBuffer(arrayBuffer, schicht, fnameSuffix) {
     compressionOptions: { level: 6 },
   });
 
-  const safeTyp = String(typ).replace(/[^\wÄÖÜäöüß\-]+/g, "_").replace(/_+/g, "_").slice(0, 28);
-  const base = datumDE.replace(/\./g, "_") + "_" + safeTyp;
-  const fname =
-    fnameSuffix === "single"
-      ? base + "_Tageseinsatznachweis_NilsWeinandy.docx"
-      : base + "_" + String(schicht.id || "x").slice(0, 10) + ".docx";
   return { blob, fname };
 }
 
@@ -1609,7 +1609,8 @@ async function downloadDocx(schicht) {
   const resp = await fetch(TEMPLATE_URL);
   if (!resp.ok) throw new Error("Template konnte nicht geladen werden (" + resp.status + ").");
   const arrayBuffer = await resp.arrayBuffer();
-  const { blob, fname } = await buildDocxBlobFromBuffer(arrayBuffer, schicht, "single");
+  const fname = docxDownloadFilename(isoToDe(schicht.datum), 1);
+  const { blob } = await buildDocxBlobFromBuffer(arrayBuffer, schicht, fname);
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
@@ -1932,13 +1933,14 @@ async function runBulkDocxDownload() {
     if (!resp.ok) throw new Error("Template konnte nicht geladen werden (" + resp.status + ").");
     const buf = await resp.arrayBuffer();
     const zip = new JSZip();
-    const used = new Set();
+    const perDayIndex = new Map();
     for (const schicht of list) {
-      let { blob, fname } = await buildDocxBlobFromBuffer(buf, schicht, "bulk");
-      while (used.has(fname)) {
-        fname = fname.replace(/\.docx$/, "_" + Math.random().toString(36).slice(2, 7) + ".docx");
-      }
-      used.add(fname);
+      const datumDE = isoToDe(schicht.datum);
+      const k = schicht.datum;
+      const next = (perDayIndex.get(k) || 0) + 1;
+      perDayIndex.set(k, next);
+      const fname = docxDownloadFilename(datumDE, next);
+      const { blob } = await buildDocxBlobFromBuffer(buf, schicht, fname);
       zip.file(fname, blob);
     }
     const zblob = await zip.generateAsync({
