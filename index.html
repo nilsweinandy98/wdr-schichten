@@ -338,6 +338,12 @@
 
   .imp-mode-row { display: flex; flex-wrap: wrap; gap: 12px 18px; margin-bottom: 12px; font-size: 13px; color: var(--muted); }
   .imp-mode-row label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+
+  .gh-grid { display: grid; gap: 10px; margin-bottom: 12px; }
+  .gh-grid label { font-size: 10px; font-weight: 700; color: var(--light); letter-spacing: 0.5px; text-transform: uppercase; display: block; margin-bottom: 4px; }
+  .gh-grid input { width: 100%; padding: 10px 12px; border-radius: 8px; border: 1.5px solid var(--border); font-size: 15px; font-family: var(--font-mono); }
+  .gh-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .gh-note { font-size: 12px; color: var(--muted); line-height: 1.45; margin-bottom: 12px; }
 </style>
 </head>
 <body>
@@ -427,6 +433,32 @@
       <label class="btn-outline daten-file-btn">Backup einspielen<input type="file" accept="application/json,.json" class="visually-hidden" id="import-schichten-input"/></label>
     </div>
   </div>
+
+  <div class="card gh-card">
+    <div class="sec-label">GitHub Sync</div>
+    <p class="gh-note">Speichert eine <strong>verschlüsselte</strong> JSON-Datei in <strong>deinem</strong> Repo (über die GitHub-API). Überall dasselbe <strong>Sync-Kennwort</strong> und ein <strong>Personal Access Token</strong> (mit „Contents“ Schreibzugriff auf dieses Repo). Der Token landet nur lokal im Browser — <strong>nie ins Repo committen</strong>.</p>
+    <div class="gh-grid">
+      <div><label for="gh-owner">Owner / Organisation</label><input id="gh-owner" type="text" placeholder="nilsweinandy98" autocomplete="off"/></div>
+      <div><label for="gh-repo">Repo-Name</label><input id="gh-repo" type="text" placeholder="wdr-schichten" autocomplete="off"/></div>
+      <div><label for="gh-path">Dateipfad im Repo</label><input id="gh-path" type="text" placeholder="data/schichten-sync.enc.json" autocomplete="off"/></div>
+      <div><label for="gh-branch">Branch</label><input id="gh-branch" type="text" placeholder="main" autocomplete="off"/></div>
+      <div><label for="gh-token">GitHub Token (PAT)</label><input id="gh-token" type="password" placeholder="" autocomplete="off"/></div>
+      <div><label for="gh-sync-pw">Sync-Kennwort (überall gleich)</label><input id="gh-sync-pw" type="password" placeholder="" autocomplete="new-password"/></div>
+    </div>
+    <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);margin-bottom:10px;cursor:pointer">
+      <input type="checkbox" id="gh-autosync"/> Nach Änderungen automatisch zu GitHub hochladen (ca. 1 s verzögert)
+    </label>
+    <div class="imp-mode-row" style="margin-bottom:14px">
+      <span style="font-weight:700;color:var(--text)">Beim Laden von GitHub:</span>
+      <label><input type="radio" name="gh-pull-mode" value="merge" checked/> Zusammenführen (neue IDs)</label>
+      <label><input type="radio" name="gh-pull-mode" value="replace"/> Liste ersetzen</label>
+    </div>
+    <div class="gh-actions">
+      <button type="button" class="btn-outline" onclick="saveGithubSettingsFromUI()">Einstellungen speichern</button>
+      <button type="button" class="btn-outline" onclick="pullFromGithub()">Von GitHub laden</button>
+      <button type="button" class="btn-primary" style="width:auto;padding:10px 16px" onclick="pushToGithub()">Zu GitHub hochladen</button>
+    </div>
+  </div>
 </main>
 
 <div class="overlay" id="overlay-delete" onclick="closeSheet('delete')">
@@ -478,7 +510,11 @@ const FEIERTAGE_NRW = new Set([
 
 const STORAGE_ENC_KEY = "wdr-v5-vault";
 const STORAGE_KEY = "wdr-v5";
+const STORAGE_GH_CONFIG = "wdr-gh-config";
+const STORAGE_GH_TOKEN = "wdr-gh-token";
+const STORAGE_GH_SYNC_PW = "wdr-gh-sync-passphrase";
 const PBKDF2_ITERATIONS = 210000;
+let ghAutosyncTimer = null;
 /** Bei Ansicht „Alle“: nur so viele zuletzt abgerechnete Schichten mit anzeigen */
 const SHOW_LAST_ABGERECHNET = 3;
 const TEMPLATE_URL = "https://raw.githubusercontent.com/nilsweinandy98/wdr-schichten/main/template.docx";
@@ -587,6 +623,7 @@ function save() {
   } else {
     saveLegacyPlainIfNeeded();
   }
+  scheduleGithubAutosync();
 }
 
 function mergeSchichtenArrays(existing, incoming) {
@@ -605,6 +642,230 @@ function mergeSchichtenArrays(existing, incoming) {
 function getImportMode() {
   const r = document.querySelector('input[name="imp-mode"]:checked');
   return r && r.value === "replace" ? "replace" : "merge";
+}
+
+function getGhPullMode() {
+  const r = document.querySelector('input[name="gh-pull-mode"]:checked');
+  return r && r.value === "replace" ? "replace" : "merge";
+}
+
+function getGhConfigParsed() {
+  try {
+    const d = JSON.parse(localStorage.getItem(STORAGE_GH_CONFIG) || "{}");
+    return {
+      owner: (d.owner || "").trim(),
+      repo: (d.repo || "").trim(),
+      path: (d.path || "data/schichten-sync.enc.json").trim(),
+      branch: (d.branch || "main").trim(),
+      autosyncPush: !!d.autosyncPush,
+    };
+  } catch (_) {
+    return { owner: "", repo: "", path: "data/schichten-sync.enc.json", branch: "main", autosyncPush: false };
+  }
+}
+
+function getGhToken() { return (localStorage.getItem(STORAGE_GH_TOKEN) || "").trim(); }
+function getGhSyncPassphrase() { return localStorage.getItem(STORAGE_GH_SYNC_PW) || ""; }
+
+function strToB64Utf8(str) {
+  const bytes = new TextEncoder().encode(str);
+  let bin = "";
+  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+  return btoa(bin);
+}
+
+function b64Utf8ToStr(b64) {
+  const clean = (b64 || "").replace(/\s/g, "");
+  const bin = atob(clean);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new TextDecoder().decode(bytes);
+}
+
+function ghContentsApiPath(owner, repo, path) {
+  const segs = path.split("/").filter(Boolean).map(encodeURIComponent).join("/");
+  return `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/contents/${segs}`;
+}
+
+async function githubApi(method, pathUrl, body) {
+  const token = getGhToken();
+  if (!token) throw new Error("GitHub-Token fehlt (unter GitHub Sync speichern).");
+  const res = await fetch("https://api.github.com" + pathUrl, {
+    method,
+    headers: {
+      Authorization: "Bearer " + token,
+      Accept: "application/vnd.github+json",
+      "X-GitHub-Api-Version": "2022-11-28",
+      ...(body ? { "Content-Type": "application/json" } : {}),
+    },
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+  });
+  const text = await res.text();
+  let json = {};
+  try { json = text ? JSON.parse(text) : {}; } catch (_) {}
+  if (!res.ok) throw new Error(json.message || text || res.status);
+  return json;
+}
+
+async function buildGithubEncryptedFile(passphrase, innerObj) {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const key = await deriveVaultKey(passphrase, salt);
+  const { iv, ciphertext } = await encryptVaultInner(key, innerObj);
+  return JSON.stringify({
+    v: 2,
+    pbkdf2Iterations: PBKDF2_ITERATIONS,
+    salt: u8ToB64(salt),
+    iv,
+    ciphertext,
+    meta: { app: "wdr-schichten", savedISO: todayISO() },
+  });
+}
+
+async function decryptGithubEncryptedFile(passphrase, envelope) {
+  if (!envelope || envelope.v !== 2 || !envelope.salt || !envelope.iv || !envelope.ciphertext) {
+    throw new Error("Ungültige Sync-Datei im Repo.");
+  }
+  const saltU8 = b64ToU8(envelope.salt);
+  const it = envelope.pbkdf2Iterations || PBKDF2_ITERATIONS;
+  const key = await deriveVaultKey(passphrase, saltU8, it);
+  return decryptVaultInner(key, envelope.iv, envelope.ciphertext);
+}
+
+async function githubFetchEncryptedEnvelope(cfg) {
+  const pathUrl = ghContentsApiPath(cfg.owner, cfg.repo, cfg.path);
+  const q = `?ref=${encodeURIComponent(cfg.branch)}`;
+  const data = await githubApi("GET", pathUrl + q);
+  if (!data.content) throw new Error("Leere Antwort von GitHub.");
+  const raw = b64Utf8ToStr(data.content);
+  return { envelope: JSON.parse(raw), sha: data.sha };
+}
+
+async function pushSchichtenToGithub(schichtenArr) {
+  if (!cryptoSubtleOk()) throw new Error("Verschlüsselung nicht verfügbar (HTTPS / lokaler Server nötig).");
+  const cfg = getGhConfigParsed();
+  if (!cfg.owner || !cfg.repo) throw new Error("Owner und Repo ausfüllen.");
+  const pass = getGhSyncPassphrase();
+  if (!pass) throw new Error("Sync-Kennwort fehlt (einmal speichern).");
+
+  const inner = { schichten: schichtenArr };
+  const fileText = await buildGithubEncryptedFile(pass, inner);
+  const content = strToB64Utf8(fileText);
+
+  const pathUrl = ghContentsApiPath(cfg.owner, cfg.repo, cfg.path);
+  let sha = null;
+  try {
+    const cur = await githubApi("GET", pathUrl + `?ref=${encodeURIComponent(cfg.branch)}`);
+    sha = cur.sha || null;
+  } catch (_) { /* Datei existiert noch nicht */ }
+
+  const payload = {
+    message: `schichten: sync ${todayISO()}`,
+    content,
+    branch: cfg.branch,
+    ...(sha ? { sha } : {}),
+  };
+  await githubApi("PUT", pathUrl, payload);
+}
+
+function scheduleGithubAutosync() {
+  clearTimeout(ghAutosyncTimer);
+  ghAutosyncTimer = setTimeout(() => {
+    tryGhAutosyncPush().catch(() => {});
+  }, 1100);
+}
+
+async function tryGhAutosyncPush() {
+  const cfg = getGhConfigParsed();
+  if (!cfg.autosyncPush) return;
+  if (!cfg.owner || !cfg.repo || !getGhToken() || !getGhSyncPassphrase()) return;
+  if (!cryptoSubtleOk()) return;
+  try {
+    await pushSchichtenToGithub(state.schichten);
+  } catch (_) { /* still offline oder Rate-Limits — nicht bei jedem Tipp stören */ }
+}
+
+async function pushToGithub() {
+  try {
+    await pushSchichtenToGithub(state.schichten);
+    showToast("Zu GitHub hochgeladen ✓");
+  } catch (e) {
+    showToast("GitHub: " + e.message, "err");
+  }
+}
+
+async function pullFromGithub() {
+  try {
+    if (!cryptoSubtleOk()) throw new Error("HTTPS oder lokaler Server nötig zum Entschlüsseln.");
+    const cfg = getGhConfigParsed();
+    if (!cfg.owner || !cfg.repo) throw new Error("Owner und Repo ausfüllen.");
+    const pass = getGhSyncPassphrase();
+    if (!pass) throw new Error("Sync-Kennwort eingeben und „Einstellungen speichern“.");
+
+    const { envelope } = await githubFetchEncryptedEnvelope(cfg);
+    const inner = await decryptGithubEncryptedFile(pass, envelope);
+    const incoming = normalizeSchichtenArray(inner.schichten || []);
+
+    if (getGhPullMode() === "replace") {
+      state.schichten = incoming;
+      showToast("Liste durch GitHub ersetzt ✓");
+    } else {
+      const { merged, added } = mergeSchichtenArrays(state.schichten, incoming);
+      state.schichten = merged;
+      showToast(`GitHub: ${added} neue Schicht(en) übernommen ✓`);
+    }
+    save();
+    render();
+  } catch (e) {
+    showToast("GitHub laden: " + e.message, "err");
+  }
+}
+
+function saveGithubSettingsFromUI() {
+  const tokenEl = document.getElementById("gh-token");
+  const pwEl = document.getElementById("gh-sync-pw");
+  const tok = tokenEl && tokenEl.value.trim();
+  const pw = pwEl && pwEl.value;
+
+  const cfg = {
+    owner: (document.getElementById("gh-owner") && document.getElementById("gh-owner").value) || "",
+    repo: (document.getElementById("gh-repo") && document.getElementById("gh-repo").value) || "",
+    path: (document.getElementById("gh-path") && document.getElementById("gh-path").value.trim()) || "data/schichten-sync.enc.json",
+    branch: (document.getElementById("gh-branch") && document.getElementById("gh-branch").value.trim()) || "main",
+    autosyncPush: !!(document.getElementById("gh-autosync") && document.getElementById("gh-autosync").checked),
+  };
+
+  localStorage.setItem(STORAGE_GH_CONFIG, JSON.stringify(cfg));
+  if (tok) localStorage.setItem(STORAGE_GH_TOKEN, tok);
+  if (pw) localStorage.setItem(STORAGE_GH_SYNC_PW, pw);
+
+  if (tokenEl) tokenEl.value = "";
+  renderGithubSettings();
+  showToast("GitHub-Einstellungen gespeichert ✓");
+}
+
+function renderGithubSettings() {
+  const cfg = getGhConfigParsed();
+  const owner = document.getElementById("gh-owner");
+  const repo = document.getElementById("gh-repo");
+  const path = document.getElementById("gh-path");
+  const branch = document.getElementById("gh-branch");
+  const tok = document.getElementById("gh-token");
+  const pw = document.getElementById("gh-sync-pw");
+  const au = document.getElementById("gh-autosync");
+
+  if (owner) owner.value = cfg.owner;
+  if (repo) repo.value = cfg.repo;
+  if (path) path.value = cfg.path || "data/schichten-sync.enc.json";
+  if (branch) branch.value = cfg.branch || "main";
+  if (au) au.checked = cfg.autosyncPush;
+  if (tok) {
+    tok.value = "";
+    tok.placeholder = getGhToken() ? "•••• gespeichert — neu eingeben zum Ersetzen" : "ghp_… oder feiner PAT";
+  }
+  if (pw) {
+    pw.value = "";
+    pw.placeholder = getGhSyncPassphrase() ? "•••• gespeichert — neu zum Ändern" : "Dasselbe Kennwort überall";
+  }
 }
 
 function revealVaultApp() {
@@ -786,6 +1047,7 @@ function bootstrapAfterUnlock() {
   }
   updateHeaderClock();
   setInterval(updateHeaderClock, 1000);
+  renderGithubSettings();
   render();
 }
 
