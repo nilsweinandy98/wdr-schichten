@@ -269,9 +269,89 @@
     main { padding-bottom: calc(100px + env(safe-area-inset-bottom)); }
     .sheet { padding-bottom: calc(40px + env(safe-area-inset-bottom)); }
   }
+
+  body.vault-locked header,
+  body.vault-locked main { visibility: hidden; pointer-events: none; user-select: none; }
+
+  .vault-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    background: linear-gradient(165deg, #0c1426 0%, #1e293b 100%);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 18px;
+    visibility: visible;
+    pointer-events: all;
+  }
+  .vault-overlay.visible { display: flex; }
+  .vault-panel {
+    width: 100%;
+    max-width: 380px;
+    background: #fff;
+    border-radius: 18px;
+    padding: 26px 22px 22px;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.35);
+  }
+  .vault-brand {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 20px;
+    color: var(--dark);
+    margin-bottom: 8px;
+  }
+  .vault-msg { font-size: 14px; color: var(--muted); line-height: 1.45; margin-bottom: 16px; }
+  .vault-warn {
+    font-size: 12px;
+    color: var(--red);
+    background: #fef2f2;
+    border-radius: 8px;
+    padding: 10px;
+    margin-bottom: 14px;
+    line-height: 1.4;
+    display: none;
+  }
+  .vault-panel input[type="password"] {
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 1.5px solid var(--border);
+    font-size: 17px;
+    margin-bottom: 10px;
+    font-family: var(--font-sans);
+  }
+  .vault-panel .btn-primary { margin-top: 6px; }
+  .btn-lock {
+    margin-top: 8px;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 6px 12px;
+    border-radius: 20px;
+    border: 1px solid #475569;
+    background: transparent;
+    color: #94a3b8;
+    cursor: pointer;
+    font-family: var(--font-sans);
+  }
+  .btn-lock:active { opacity: 0.85; }
+
+  .imp-mode-row { display: flex; flex-wrap: wrap; gap: 12px 18px; margin-bottom: 12px; font-size: 13px; color: var(--muted); }
+  .imp-mode-row label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
 </style>
 </head>
 <body>
+
+<div id="vault-overlay" class="vault-overlay visible" aria-modal="true" role="dialog">
+  <div class="vault-panel">
+    <div class="vault-brand">Schichten-Tresor</div>
+    <div id="vault-subtle-warn" class="vault-warn">Verschlüsselung nicht verfügbar (z. B. bei file://). Bitte die Seite über einen lokalen Server oder HTTPS öffnen.</div>
+    <p id="vault-msg" class="vault-msg">…</p>
+    <input type="password" id="vault-pw1" autocomplete="current-password" placeholder="Passwort"/>
+    <input type="password" id="vault-pw2" autocomplete="new-password" placeholder="Passwort wiederholen" style="display:none"/>
+    <button type="button" class="btn-primary" id="vault-submit">…</button>
+  </div>
+</div>
 
 <header>
   <div class="h-wrap">
@@ -281,6 +361,7 @@
       <div class="h-build">Stand <span id="header-clock">–</span></div>
     </div>
     <div class="h-meta">
+      <button type="button" class="btn-lock" id="btn-lock-vault" onclick="lockVault()" style="display:none">Sperren</button>
       <div class="h-name">Nils Weinandy</div>
       <div class="h-pv">PV 887043</div>
     </div>
@@ -334,8 +415,13 @@
 
   <div class="card daten-card">
     <div class="sec-label">Daten &amp; Sicherung</div>
-    <p class="daten-p">Die Schichten werden nur <strong>lokal in diesem Browser</strong> gespeichert, unter dem Schlüssel <code class="mono">wdr-v5</code> im <code class="mono">localStorage</code>. Es gibt <strong>keinen Server</strong> und <strong>kein Login</strong> — niemand synchronisiert die Daten automatisch. Sie gehen verloren, wenn du Website-Daten löschst, den Browser wechselst oder die Datei auf einem anderen Gerät öffnest.</p>
-    <p class="daten-p"><strong>Sichern:</strong> regelmäßig ein JSON-Backup herunterladen und z. B. in iCloud Drive / „Akten“ ablegen. Bei Bedarf wieder einspielen (ersetzt die aktuelle Liste).</p>
+    <p class="daten-p">Nach dem Entsperren liegen die Schichten <strong>verschlüsselt</strong> unter <code class="mono">wdr-v5-vault</code> im <code class="mono">localStorage</code> dieses Browsers. Das Passwort bleibt nur bei dir; ohne Passwort sind die Daten nicht lesbar. Es gibt <strong>keinen Cloud-Server</strong> — Sync musst du selbst über Backups machen.</p>
+    <p class="daten-p"><strong>Hinweis:</strong> Schutz gilt für diese Browser-Installation. Wer Zugriff auf dein Gerät und das Passwort hat, kann die Daten entsperren. Bei file:// kann Verschlüsselung ausfallen — Seite per lokalem Server oder HTTPS öffnen.</p>
+    <p class="daten-p"><strong>Backup (.json):</strong> unverschlüsselte Kopie zum Archivieren; sicher aufbewahren. Import:</p>
+    <div class="imp-mode-row">
+      <label><input type="radio" name="imp-mode" value="merge" checked/> Zusammenführen (nur neue IDs)</label>
+      <label><input type="radio" name="imp-mode" value="replace"/> Liste ersetzen</label>
+    </div>
     <div class="daten-row">
       <button type="button" class="btn-outline" onclick="exportSchichtenBackup()">Backup speichern (.json)</button>
       <label class="btn-outline daten-file-btn">Backup einspielen<input type="file" accept="application/json,.json" class="visually-hidden" id="import-schichten-input"/></label>
@@ -390,7 +476,9 @@ const FEIERTAGE_NRW = new Set([
   "2027-10-03","2027-11-01","2027-12-25","2027-12-26",
 ]);
 
+const STORAGE_ENC_KEY = "wdr-v5-vault";
 const STORAGE_KEY = "wdr-v5";
+const PBKDF2_ITERATIONS = 210000;
 /** Bei Ansicht „Alle“: nur so viele zuletzt abgerechnete Schichten mit anzeigen */
 const SHOW_LAST_ABGERECHNET = 3;
 const TEMPLATE_URL = "https://raw.githubusercontent.com/nilsweinandy98/wdr-schichten/main/template.docx";
@@ -409,22 +497,298 @@ let state = {
   loading: null,
 };
 
-function load() {
-  try { const r = localStorage.getItem(STORAGE_KEY); if (r) state.schichten = JSON.parse(r); } catch {}
-  let dirty = false;
-  state.schichten = (state.schichten || []).map(s => {
-    const iso = datumToISO(s.datum);
-    if (iso !== s.datum) dirty = true;
-    let status = s.status;
-    if (status === "generiert") { status = "mail"; dirty = true; }
-    if (!STATUS[status]) { status = "ausstehend"; dirty = true; }
-    return { ...s, datum: iso, status };
-  });
-  if (dirty) save();
+let sessionVaultKey = null;
+let vaultSaltB64 = null;
+
+function cryptoSubtleOk() {
+  return !!(window.crypto && window.crypto.subtle);
 }
+
+function u8ToB64(u8) {
+  let s = "";
+  for (let i = 0; i < u8.length; i++) s += String.fromCharCode(u8[i]);
+  return btoa(s);
+}
+function b64ToU8(b64) {
+  const bin = atob(b64);
+  const u8 = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+  return u8;
+}
+function bufToB64(buf) {
+  return u8ToB64(new Uint8Array(buf));
+}
+
+function normalizeSchichtRow(s) {
+  const iso = datumToISO(s.datum);
+  let status = s.status;
+  if (status === "generiert") status = "mail";
+  if (!STATUS[status]) status = "ausstehend";
+  return { ...s, datum: iso, status };
+}
+
+function normalizeSchichtenArray(arr) {
+  return (arr || []).map(normalizeSchichtRow);
+}
+
+async function deriveVaultKey(password, saltU8, iterations = PBKDF2_ITERATIONS) {
+  const enc = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey(
+    "raw", enc.encode(password), "PBKDF2", false, ["deriveKey"]);
+  return crypto.subtle.deriveKey(
+    { name: "PBKDF2", salt: saltU8, iterations, hash: "SHA-256" },
+    keyMaterial,
+    { name: "AES-GCM", length: 256 },
+    false,
+    ["encrypt", "decrypt"]);
+}
+
+async function encryptVaultInner(key, innerObj) {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const enc = new TextEncoder();
+  const ct = await crypto.subtle.encrypt(
+    { name: "AES-GCM", iv },
+    key,
+    enc.encode(JSON.stringify(innerObj)));
+  return { iv: u8ToB64(iv), ciphertext: bufToB64(ct) };
+}
+
+async function decryptVaultInner(key, ivB64, ciphertextB64) {
+  const iv = b64ToU8(ivB64);
+  const ctRaw = atob(ciphertextB64);
+  const ct = new Uint8Array(ctRaw.length);
+  for (let i = 0; i < ctRaw.length; i++) ct[i] = ctRaw.charCodeAt(i);
+  const pt = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ct);
+  const dec = new TextDecoder();
+  return JSON.parse(dec.decode(pt));
+}
+
+async function persistEncrypted() {
+  if (!sessionVaultKey || !vaultSaltB64) return;
+  const inner = { schichten: state.schichten };
+  const { iv, ciphertext } = await encryptVaultInner(sessionVaultKey, inner);
+  const env = {
+    v: 2,
+    pbkdf2Iterations: PBKDF2_ITERATIONS,
+    salt: vaultSaltB64,
+    iv,
+    ciphertext,
+  };
+  localStorage.setItem(STORAGE_ENC_KEY, JSON.stringify(env));
+}
+
+function removeLegacyPlaintext() {
+  try { localStorage.removeItem(STORAGE_KEY); } catch (_) {}
+}
+
 function save() {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state.schichten)); } catch {}
+  if (sessionVaultKey && vaultSaltB64) {
+    persistEncrypted().catch(() => showToast("Speichern fehlgeschlagen", "err"));
+  } else {
+    saveLegacyPlainIfNeeded();
+  }
 }
+
+function mergeSchichtenArrays(existing, incoming) {
+  const byId = new Map(existing.map(s => [s.id, s]));
+  let added = 0;
+  for (const s of incoming) {
+    const n = normalizeSchichtRow(s);
+    if (!byId.has(n.id)) {
+      byId.set(n.id, n);
+      added++;
+    }
+  }
+  return { merged: [...byId.values()], added };
+}
+
+function getImportMode() {
+  const r = document.querySelector('input[name="imp-mode"]:checked');
+  return r && r.value === "replace" ? "replace" : "merge";
+}
+
+function revealVaultApp() {
+  const ov = document.getElementById("vault-overlay");
+  const btnLock = document.getElementById("btn-lock-vault");
+  if (ov) ov.classList.remove("visible");
+  document.body.classList.remove("vault-locked");
+  if (btnLock) btnLock.style.display = sessionVaultKey ? "block" : "none";
+}
+
+function lockVault() {
+  if (!sessionVaultKey) return;
+  sessionVaultKey = null;
+  vaultSaltB64 = null;
+  const p1 = document.getElementById("vault-pw1");
+  const p2 = document.getElementById("vault-pw2");
+  const msg = document.getElementById("vault-msg");
+  const btn = document.getElementById("vault-submit");
+  const btnLock = document.getElementById("btn-lock-vault");
+  if (p1) p1.value = "";
+  if (p2) p2.value = "";
+  if (p2) p2.style.display = "none";
+  if (msg) msg.textContent = "Passwort eingeben, um den Tresor zu entsperren.";
+  if (btn) {
+    btn.style.display = "block";
+    btn.textContent = "Entsperren";
+    btn.onclick = () => unlockVaultFromUI();
+  }
+  if (btnLock) btnLock.style.display = "none";
+  document.body.classList.add("vault-locked");
+  const ov = document.getElementById("vault-overlay");
+  if (ov) ov.classList.add("visible");
+}
+
+function vaultToast(msg, err) {
+  const el = document.getElementById("vault-msg");
+  if (el && err) {
+    el.textContent = msg;
+    el.style.color = "#dc2626";
+    setTimeout(() => { el.style.color = ""; }, 3500);
+  } else showToast(msg, err ? "err" : "ok");
+}
+
+async function unlockVaultFromUI() {
+  if (!cryptoSubtleOk()) return;
+  const raw = localStorage.getItem(STORAGE_ENC_KEY);
+  const env = JSON.parse(raw);
+  const pw = document.getElementById("vault-pw1").value;
+  if (!pw) { vaultToast("Passwort eingeben", true); return; }
+  try {
+    const saltU8 = b64ToU8(env.salt);
+    vaultSaltB64 = env.salt;
+    const iters = env.pbkdf2Iterations || PBKDF2_ITERATIONS;
+    sessionVaultKey = await deriveVaultKey(pw, saltU8, iters);
+    const inner = await decryptVaultInner(sessionVaultKey, env.iv, env.ciphertext);
+    state.schichten = normalizeSchichtenArray(inner.schichten);
+    removeLegacyPlaintext();
+    revealVaultApp();
+    save();
+    showToast("Tresor entsperrt ✓");
+    bootstrapAfterUnlock();
+  } catch (_) {
+    sessionVaultKey = null;
+    vaultSaltB64 = null;
+    vaultToast("Falsches Passwort oder beschädigte Daten.", true);
+  }
+}
+
+async function setupVaultFromUI() {
+  if (!cryptoSubtleOk()) return;
+  const p1 = document.getElementById("vault-pw1").value;
+  const p2 = document.getElementById("vault-pw2").value;
+  if (p1.length < 8) { vaultToast("Passwort: mindestens 8 Zeichen.", true); return; }
+  if (p1 !== p2) { vaultToast("Passwörter stimmen nicht überein.", true); return; }
+  let initial = [];
+  try {
+    const leg = localStorage.getItem(STORAGE_KEY);
+    if (leg) initial = JSON.parse(leg);
+  } catch (_) {}
+  initial = normalizeSchichtenArray(initial);
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  vaultSaltB64 = u8ToB64(salt);
+  sessionVaultKey = await deriveVaultKey(p1, salt);
+  state.schichten = initial;
+  await persistEncrypted();
+  removeLegacyPlaintext();
+  revealVaultApp();
+  showToast("Tresor eingerichtet ✓");
+  bootstrapAfterUnlock();
+}
+
+function initVaultGate() {
+  const subtleOk = cryptoSubtleOk();
+  const wSub = document.getElementById("vault-subtle-warn");
+  if (wSub) wSub.style.display = subtleOk ? "none" : "block";
+
+  const msg = document.getElementById("vault-msg");
+  const p2 = document.getElementById("vault-pw2");
+  const btn = document.getElementById("vault-submit");
+
+  document.body.classList.add("vault-locked");
+
+  const enc = localStorage.getItem(STORAGE_ENC_KEY);
+
+  if (enc && !subtleOk) {
+    if (msg) msg.textContent = "Ein verschlüsselter Tresor ist vorhanden, aber unter file:// u. Ä. kann der Browser nicht entschlüsseln. Öffne die Seite über einen kleinen lokalen Server oder HTTPS, dann funktioniert das Passwort wieder.";
+    if (p2) p2.style.display = "none";
+    if (btn) btn.style.display = "none";
+    return;
+  }
+
+  if (btn) btn.style.display = "block";
+
+  if (enc && subtleOk) {
+    if (msg) msg.textContent = "Passwort eingeben, um den Tresor zu entsperren.";
+    if (p2) p2.style.display = "none";
+    if (btn) {
+      btn.textContent = "Entsperren";
+      btn.onclick = () => unlockVaultFromUI();
+    }
+  } else if (!subtleOk) {
+    if (msg) msg.textContent = "Ohne sicheren Kontext (typisch: direkt geöffnete Datei) ist keine Verschlüsselung möglich — nur ein ungeschützter lokaler Modus.";
+    if (p2) p2.style.display = "none";
+    if (btn) {
+      btn.textContent = "Ohne Schutz fortfahren";
+      btn.onclick = () => bootstrapLegacyInsecure();
+    }
+  } else {
+    const legacy = !!localStorage.getItem(STORAGE_KEY);
+    if (msg) msg.textContent = legacy
+      ? "Lege ein Passwort fest — bestehende Schichten werden verschlüsselt übernommen."
+      : "Lege ein Passwort fest — Schichten werden nur verschlüsselt auf diesem Gerät gespeichert.";
+    if (p2) p2.style.display = "block";
+    if (btn) {
+      btn.textContent = "Tresor einrichten";
+      btn.onclick = () => setupVaultFromUI();
+    }
+  }
+}
+
+function bootstrapLegacyInsecure() {
+  try {
+    const leg = localStorage.getItem(STORAGE_KEY);
+    if (leg) state.schichten = normalizeSchichtenArray(JSON.parse(leg));
+  } catch (_) {}
+  revealVaultApp();
+  saveLegacyPlainIfNeeded();
+  bootstrapAfterUnlock();
+}
+
+function saveLegacyPlainIfNeeded() {
+  if (cryptoSubtleOk()) return;
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state.schichten)); } catch (_) {}
+}
+
+function bootstrapAfterUnlock() {
+  const de = document.getElementById("datum-de");
+  const pk = document.getElementById("datum-picker");
+  const btn = document.getElementById("datum-cal-btn");
+  if (de && pk && btn) {
+    de.value = todayDE();
+    syncPickerFromDE();
+    de.addEventListener("input", syncPickerFromDE);
+    de.addEventListener("change", syncPickerFromDE);
+    pk.addEventListener("change", syncDEFromPicker);
+    btn.addEventListener("click", () => {
+      syncPickerFromDE();
+      if (typeof pk.showPicker === "function") pk.showPicker();
+      else pk.focus();
+    });
+  }
+  const inpImp = document.getElementById("import-schichten-input");
+  if (inpImp) {
+    inpImp.addEventListener("change", e => {
+      const f = e.target.files && e.target.files[0];
+      if (f) importSchichtenBackup(f);
+      e.target.value = "";
+    });
+  }
+  updateHeaderClock();
+  setInterval(updateHeaderClock, 1000);
+  render();
+}
+
 
 function uid() { return Math.random().toString(36).slice(2,10); }
 
@@ -833,7 +1197,8 @@ function setFilter(f) {
 function exportSchichtenBackup() {
   const payload = {
     app: "wdr-schichten",
-    storageKey: STORAGE_KEY,
+    vaultEncKey: STORAGE_ENC_KEY,
+    legacyPlainKey: STORAGE_KEY,
     exportedISO: todayISO(),
     schichten: state.schichten,
   };
@@ -857,16 +1222,17 @@ function importSchichtenBackup(file) {
       const data = JSON.parse(reader.result);
       const raw = Array.isArray(data) ? data : data.schichten;
       if (!Array.isArray(raw)) throw new Error("Ungültig");
-      state.schichten = raw.map(s => {
-        const iso = datumToISO(s.datum);
-        let status = s.status;
-        if (status === "generiert") status = "mail";
-        if (!STATUS[status]) status = "ausstehend";
-        return { ...s, datum: iso, status };
-      });
+      const incoming = normalizeSchichtenArray(raw);
+      if (getImportMode() === "replace") {
+        state.schichten = incoming;
+        showToast("Liste durch Import ersetzt ✓");
+      } else {
+        const { merged, added } = mergeSchichtenArrays(state.schichten, incoming);
+        state.schichten = merged;
+        showToast(`Zusammenführen: ${added} neue Schicht(en), bestehende IDs unverändert ✓`);
+      }
       save();
       render();
-      showToast("Backup eingespielt ✓");
     } catch (e) {
       showToast("Import fehlgeschlagen – Datei prüfen", "err");
     }
@@ -956,35 +1322,7 @@ function updateHeaderClock() {
     p(d.getHours()) + ":" + p(d.getMinutes()) + ":" + p(d.getSeconds());
 }
 
-load();
-(function wireDatumUI() {
-  const de = document.getElementById("datum-de");
-  const pk = document.getElementById("datum-picker");
-  const btn = document.getElementById("datum-cal-btn");
-  if (!de || !pk || !btn) return;
-  de.value = todayDE();
-  syncPickerFromDE();
-  de.addEventListener("input", syncPickerFromDE);
-  de.addEventListener("change", syncPickerFromDE);
-  pk.addEventListener("change", syncDEFromPicker);
-  btn.addEventListener("click", () => {
-    syncPickerFromDE();
-    if (typeof pk.showPicker === "function") pk.showPicker();
-    else pk.focus();
-  });
-})();
-(function wireBackupImport() {
-  const inp = document.getElementById("import-schichten-input");
-  if (!inp) return;
-  inp.addEventListener("change", e => {
-    const f = e.target.files && e.target.files[0];
-    if (f) importSchichtenBackup(f);
-    e.target.value = "";
-  });
-})();
-updateHeaderClock();
-setInterval(updateHeaderClock, 1000);
-render();
+initVaultGate();
 </script>
 </body>
 </html>
