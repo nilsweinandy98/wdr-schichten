@@ -1,0 +1,9 @@
+{
+  "format": "wdr-connection",
+  "v": 1,
+  "owner": "nilsweinandy98",
+  "repo": "wdr-schichten",
+  "path": "data/wdr-access.json",
+  "branch": "main",
+  "savedISO": "2026-05-03"
+}
