@@ -159,21 +159,6 @@
   .f-btn.active .f-badge { background: rgba(255,255,255,0.2); }
 
   .list { display: flex; flex-direction: column; gap: 8px; }
-  .list-day-header {
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--text);
-    letter-spacing: 0.02em;
-    padding: 12px 6px 6px;
-    margin: 4px 0 2px;
-    border-bottom: 2px solid var(--border);
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    gap: 8px;
-  }
-  .list-day-header .list-day-wd { color: var(--muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; }
-  .list-day-header.list-day-weekend { background: rgba(124, 58, 237, 0.06); border-radius: 10px 10px 0 0; border-bottom-color: #e9d5ff; }
   .list-now-row {
     display: flex;
     align-items: center;
@@ -1421,16 +1406,10 @@ function isoToDate(iso) {
 }
 
 const DAYS_SHORT = ["So","Mo","Di","Mi","Do","Fr","Sa"];
-const DAYS_LONG = ["Sonntag","Montag","Dienstag","Mittwoch","Donnerstag","Freitag","Samstag"];
 function dayName(iso) {
   const dt = isoToDate(iso);
   if (isNaN(dt.getTime())) return "–";
   return DAYS_SHORT[dt.getDay()];
-}
-function dayNameLong(iso) {
-  const dt = isoToDate(iso);
-  if (isNaN(dt.getTime())) return "";
-  return DAYS_LONG[dt.getDay()];
 }
 function isWeekendDay(iso) {
   const dt = isoToDate(iso);
@@ -1791,7 +1770,7 @@ function renderList() {
     if (state.filter === "alle" && hid > 0) {
       hintEl.style.display = "block";
       hintEl.textContent =
-        `Chronologisch (älteste oben). Unter „Alle“ siehst du alle offenen Schichten plus nur die ${SHOW_LAST_ABGERECHNET} zuletzt abgerechneten. ${hid} ältere abgerechnete Schicht${hid === 1 ? " ist" : "en sind"} ausgeblendet — Filter „Abgerechnet“ zeigt alle. Die rote Linie mit „Jetzt“ trennt vergangene/heutige von geplanten Schichten.`;
+        `Chronologisch (älteste oben). Unter „Alle“ siehst du alle offenen Schichten plus nur die ${SHOW_LAST_ABGERECHNET} zuletzt abgerechneten. ${hid} ältere abgerechnete Schicht${hid === 1 ? " ist" : "en sind"} ausgeblendet — Filter „Abgerechnet“ zeigt alle. Die rote Linie „Jetzt“ markiert den Übergang zu späteren Terminen.`;
     } else {
       hintEl.style.display = "none";
     }
@@ -1804,7 +1783,6 @@ function renderList() {
 
   const today = todayISO();
   const frag = [];
-  let prevDatum = null;
   const hasFuture = filtered.some(s => s.datum > today);
   const nowRow =
     `<div class="list-now-row" role="separator" aria-label="Ab hier geplante Schichten"><span class="list-now-line"></span><span class="list-now-badge">Jetzt</span><span class="list-now-line"></span></div>`;
@@ -1819,14 +1797,6 @@ function renderList() {
 
     if (s.datum > today && prev && prev.datum <= today && hasFuture) {
       frag.push(nowRow);
-    }
-
-    if (prevDatum !== s.datum) {
-      prevDatum = s.datum;
-      const wl = isWeekendDay(s.datum) ? " list-day-weekend" : "";
-      frag.push(
-        `<div class="list-day-header${wl}"><span>${isoToDe(s.datum)}</span><span class="list-day-wd">${dayNameLong(s.datum)}</span></div>`
-      );
     }
 
     frag.push(renderOneSchichtCard(s));
