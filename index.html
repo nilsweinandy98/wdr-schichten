@@ -436,7 +436,7 @@
 
   <div class="card gh-card">
     <div class="sec-label">GitHub Sync</div>
-    <p class="gh-note">Speichert eine <strong>verschlüsselte</strong> JSON-Datei in <strong>deinem</strong> Repo (über die GitHub-API). Überall dasselbe <strong>Sync-Kennwort</strong> und ein <strong>Personal Access Token</strong> (mit „Contents“ Schreibzugriff auf dieses Repo). Der Token landet nur lokal im Browser — <strong>nie ins Repo committen</strong>.</p>
+    <p class="gh-note">Speichert eine <strong>verschlüsselte</strong> JSON-Datei in <strong>deinem</strong> Repo (über die GitHub-API). Überall dasselbe <strong>Sync-Kennwort</strong> und ein <strong>Personal Access Token</strong> (mit „Contents“ Schreibzugriff auf dieses Repo). Der Token landet nur lokal im Browser — <strong>nie ins Repo committen</strong>. Ist die Option unten aktiv, wird beim Öffnen der Seite der Stand von GitHub geladen und nach jeder Änderung ohne Verzögerung wieder hochgeladen — GitHub gilt dann als gemeinsame Referenz zwischen den Geräten.</p>
     <div class="gh-grid">
       <div><label for="gh-owner">Owner / Organisation</label><input id="gh-owner" type="text" placeholder="nilsweinandy98" autocomplete="off"/></div>
       <div><label for="gh-repo">Repo-Name</label><input id="gh-repo" type="text" placeholder="wdr-schichten" autocomplete="off"/></div>
@@ -446,12 +446,12 @@
       <div><label for="gh-sync-pw">Sync-Kennwort (überall gleich)</label><input id="gh-sync-pw" type="password" placeholder="" autocomplete="new-password"/></div>
     </div>
     <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);margin-bottom:10px;cursor:pointer">
-      <input type="checkbox" id="gh-autosync"/> Nach Änderungen automatisch zu GitHub hochladen (ca. 1 s verzögert)
+      <input type="checkbox" id="gh-autosync" checked/> Beim Öffnen von GitHub laden &amp; nach jeder Änderung sofort hochladen (empfohlen für mehrere Geräte)
     </label>
     <div class="imp-mode-row" style="margin-bottom:14px">
-      <span style="font-weight:700;color:var(--text)">Beim Laden von GitHub:</span>
-      <label><input type="radio" name="gh-pull-mode" value="merge" checked/> Zusammenführen (neue IDs)</label>
-      <label><input type="radio" name="gh-pull-mode" value="replace"/> Liste ersetzen</label>
+      <span style="font-weight:700;color:var(--text)">Nur bei „Von GitHub laden“ (Button):</span>
+      <label><input type="radio" name="gh-pull-mode" value="merge" checked/> Zusammenführen (neu + gleiche IDs von Remote überschreiben)</label>
+      <label><input type="radio" name="gh-pull-mode" value="replace"/> Liste komplett ersetzen</label>
     </div>
     <div class="gh-actions">
       <button type="button" class="btn-outline" onclick="saveGithubSettingsFromUI()">Einstellungen speichern</button>
@@ -514,7 +514,6 @@ const STORAGE_GH_CONFIG = "wdr-gh-config";
 const STORAGE_GH_TOKEN = "wdr-gh-token";
 const STORAGE_GH_SYNC_PW = "wdr-gh-sync-passphrase";
 const PBKDF2_ITERATIONS = 210000;
-let ghAutosyncTimer = null;
 /** Bei Ansicht „Alle“: nur so viele zuletzt abgerechnete Schichten mit anzeigen */
 const SHOW_LAST_ABGERECHNET = 3;
 const TEMPLATE_URL = "https://raw.githubusercontent.com/nilsweinandy98/wdr-schichten/main/template.docx";
@@ -618,12 +617,7 @@ function removeLegacyPlaintext() {
 }
 
 function save() {
-  if (sessionVaultKey && vaultSaltB64) {
-    persistEncrypted().catch(() => showToast("Speichern fehlgeschlagen", "err"));
-  } else {
-    saveLegacyPlainIfNeeded();
-  }
-  scheduleGithubAutosync();
+  void persistLocalThenQueueGithub();
 }
 
 function mergeSchichtenArrays(existing, incoming) {
@@ -637,6 +631,80 @@ function mergeSchichtenArrays(existing, incoming) {
     }
   }
   return { merged: [...byId.values()], added };
+}
+
+/** GitHub „Zusammenführen“: gleiche ID wird von Remote überschrieben (Bearbeitungen werden übernommen). */
+function mergeSchichtenGithubUpsert(existing, incoming) {
+  const byId = new Map(existing.map(s => [s.id, s]));
+  let added = 0;
+  let updated = 0;
+  for (const s of incoming) {
+    const n = normalizeSchichtRow(s);
+    if (!byId.has(n.id)) {
+      byId.set(n.id, n);
+      added++;
+    } else {
+      const prev = JSON.stringify(byId.get(n.id));
+      byId.set(n.id, n);
+      if (prev !== JSON.stringify(n)) updated++;
+    }
+  }
+  return { merged: [...byId.values()], added, updated };
+}
+
+function githubSyncFullyConfigured() {
+  const cfg = getGhConfigParsed();
+  return !!(cryptoSubtleOk() && cfg.owner && cfg.repo && getGhToken() && getGhSyncPassphrase());
+}
+
+/** Remote-Schichtenliste entschlüsseln (wirft bei Netz-/Kennwortfehler). */
+async function fetchGithubSchichtenArray() {
+  const cfg = getGhConfigParsed();
+  if (!cfg.owner || !cfg.repo) throw new Error("Owner und Repo ausfüllen.");
+  const pass = getGhSyncPassphrase();
+  if (!pass) throw new Error("Sync-Kennwort fehlt.");
+  const { envelope } = await githubFetchEncryptedEnvelope(cfg);
+  const inner = await decryptGithubEncryptedFile(pass, envelope);
+  return normalizeSchichtenArray(inner.schichten || []);
+}
+
+/**
+ * Beim App-Start (wenn Auto-Sync an): kompletter Stand von GitHub ersetzt lokal —
+ * damit Löschungen und Bearbeitungen über Geräte hinweg stimmen.
+ */
+async function githubStartupPullReplaceIfEnabled() {
+  const cfg = getGhConfigParsed();
+  if (!cfg.autosyncPush || !githubSyncFullyConfigured()) return false;
+  try {
+    state.schichten = await fetchGithubSchichtenArray();
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+let ghPushChain = Promise.resolve();
+
+function queueGithubPushSerialized() {
+  if (!getGhConfigParsed().autosyncPush || !githubSyncFullyConfigured()) return;
+  ghPushChain = ghPushChain
+    .then(() => pushSchichtenToGithub(state.schichten))
+    .catch(() => {});
+}
+
+/** Lokaler Tresor erst schreiben, dann optional GitHub (ohne Verzögerung). */
+async function persistLocalThenQueueGithub() {
+  if (sessionVaultKey && vaultSaltB64) {
+    try {
+      await persistEncrypted();
+    } catch (_) {
+      showToast("Speichern fehlgeschlagen", "err");
+      return;
+    }
+  } else {
+    saveLegacyPlainIfNeeded();
+  }
+  queueGithubPushSerialized();
 }
 
 function getImportMode() {
@@ -657,10 +725,11 @@ function getGhConfigParsed() {
       repo: (d.repo || "").trim(),
       path: (d.path || "data/schichten-sync.enc.json").trim(),
       branch: (d.branch || "main").trim(),
-      autosyncPush: !!d.autosyncPush,
+      /** Standard an: bei aktivem Sync sofort laden + hochladen */
+      autosyncPush: d.autosyncPush !== false,
     };
   } catch (_) {
-    return { owner: "", repo: "", path: "data/schichten-sync.enc.json", branch: "main", autosyncPush: false };
+    return { owner: "", repo: "", path: "data/schichten-sync.enc.json", branch: "main", autosyncPush: true };
   }
 }
 
@@ -703,8 +772,27 @@ async function githubApi(method, pathUrl, body) {
   const text = await res.text();
   let json = {};
   try { json = text ? JSON.parse(text) : {}; } catch (_) {}
-  if (!res.ok) throw new Error(json.message || text || res.status);
+  if (!res.ok) {
+    const msg = json.message || text || String(res.status);
+    const err = new Error(msg);
+    err.status = res.status;
+    err.ghDocUrl = json.documentation_url || "";
+    throw err;
+  }
   return json;
+}
+
+/** Hilfstext, wenn Fine-grained PAT / Org / falsches Repo häufig 403 auslösen. */
+function githubAccessHint(status, message) {
+  const m = (message || "").toLowerCase();
+  if (status === 403 && m.includes("resource not accessible")) {
+    return (
+      " Fine-grained PAT: unter „Repository access“ genau dieses Repo anhaken; „Contents“ = Read and write. " +
+      "Org-Repo: Token bei SSO autorisieren (Developer settings → Token → Configure SSO). " +
+      "Oder klassischer PAT mit Scope „repo“. Branch „main“ muss existieren (Repo nicht komplett leer ohne Commit)."
+    );
+  }
+  return "";
 }
 
 async function buildGithubEncryptedFile(passphrase, innerObj) {
@@ -721,6 +809,23 @@ async function buildGithubEncryptedFile(passphrase, innerObj) {
   });
 }
 
+/** Lesbare Meldung statt Browser-„operation-specific reason“ bei falschem Kennwort / kaputtem Ciphertext. */
+function wrapGithubSyncDecryptError(err) {
+  const name = err && err.name;
+  const msg = (err && err.message) || String(err);
+  if (
+    name === "OperationError" ||
+    /operation-specific reason/i.test(msg) ||
+    /^(fail|unable)/i.test(msg.trim())
+  ) {
+    return new Error(
+      "Entschlüsseln fehlgeschlagen: Sync-Kennwort stimmt nicht mit der Datei im Repo überein " +
+        "(exakt dasselbe Kennwort wie beim „Zu GitHub hochladen“), oder die Datei wurde beschädigt."
+    );
+  }
+  return err instanceof Error ? err : new Error(String(err));
+}
+
 async function decryptGithubEncryptedFile(passphrase, envelope) {
   if (!envelope || envelope.v !== 2 || !envelope.salt || !envelope.iv || !envelope.ciphertext) {
     throw new Error("Ungültige Sync-Datei im Repo.");
@@ -728,7 +833,11 @@ async function decryptGithubEncryptedFile(passphrase, envelope) {
   const saltU8 = b64ToU8(envelope.salt);
   const it = envelope.pbkdf2Iterations || PBKDF2_ITERATIONS;
   const key = await deriveVaultKey(passphrase, saltU8, it);
-  return decryptVaultInner(key, envelope.iv, envelope.ciphertext);
+  try {
+    return await decryptVaultInner(key, envelope.iv, envelope.ciphertext);
+  } catch (e) {
+    throw wrapGithubSyncDecryptError(e);
+  }
 }
 
 async function githubFetchEncryptedEnvelope(cfg) {
@@ -737,7 +846,13 @@ async function githubFetchEncryptedEnvelope(cfg) {
   const data = await githubApi("GET", pathUrl + q);
   if (!data.content) throw new Error("Leere Antwort von GitHub.");
   const raw = b64Utf8ToStr(data.content);
-  return { envelope: JSON.parse(raw), sha: data.sha };
+  let envelope;
+  try {
+    envelope = JSON.parse(raw);
+  } catch (_) {
+    throw new Error("Im Repo liegt unter diesem Pfad kein gültiges JSON — Pfad prüfen oder falsche Datei.");
+  }
+  return { envelope, sha: data.sha };
 }
 
 async function pushSchichtenToGithub(schichtenArr) {
@@ -756,7 +871,14 @@ async function pushSchichtenToGithub(schichtenArr) {
   try {
     const cur = await githubApi("GET", pathUrl + `?ref=${encodeURIComponent(cfg.branch)}`);
     sha = cur.sha || null;
-  } catch (_) { /* Datei existiert noch nicht */ }
+  } catch (e) {
+    if (e.status === 404) {
+      sha = null;
+    } else {
+      const hint = githubAccessHint(e.status, e.message);
+      throw hint ? new Error(e.message + "." + hint) : e;
+    }
+  }
 
   const payload = {
     message: `schichten: sync ${todayISO()}`,
@@ -764,24 +886,12 @@ async function pushSchichtenToGithub(schichtenArr) {
     branch: cfg.branch,
     ...(sha ? { sha } : {}),
   };
-  await githubApi("PUT", pathUrl, payload);
-}
-
-function scheduleGithubAutosync() {
-  clearTimeout(ghAutosyncTimer);
-  ghAutosyncTimer = setTimeout(() => {
-    tryGhAutosyncPush().catch(() => {});
-  }, 1100);
-}
-
-async function tryGhAutosyncPush() {
-  const cfg = getGhConfigParsed();
-  if (!cfg.autosyncPush) return;
-  if (!cfg.owner || !cfg.repo || !getGhToken() || !getGhSyncPassphrase()) return;
-  if (!cryptoSubtleOk()) return;
   try {
-    await pushSchichtenToGithub(state.schichten);
-  } catch (_) { /* still offline oder Rate-Limits — nicht bei jedem Tipp stören */ }
+    await githubApi("PUT", pathUrl, payload);
+  } catch (e) {
+    const hint = githubAccessHint(e.status, e.message);
+    throw hint ? new Error(e.message + "." + hint) : e;
+  }
 }
 
 async function pushToGithub() {
@@ -789,7 +899,8 @@ async function pushToGithub() {
     await pushSchichtenToGithub(state.schichten);
     showToast("Zu GitHub hochgeladen ✓");
   } catch (e) {
-    showToast("GitHub: " + e.message, "err");
+    const hint = githubAccessHint(e.status, e.message);
+    showToast("GitHub: " + e.message + (hint ? hint : ""), "err");
   }
 }
 
@@ -801,22 +912,21 @@ async function pullFromGithub() {
     const pass = getGhSyncPassphrase();
     if (!pass) throw new Error("Sync-Kennwort eingeben und „Einstellungen speichern“.");
 
-    const { envelope } = await githubFetchEncryptedEnvelope(cfg);
-    const inner = await decryptGithubEncryptedFile(pass, envelope);
-    const incoming = normalizeSchichtenArray(inner.schichten || []);
+    const incoming = await fetchGithubSchichtenArray();
 
     if (getGhPullMode() === "replace") {
       state.schichten = incoming;
       showToast("Liste durch GitHub ersetzt ✓");
     } else {
-      const { merged, added } = mergeSchichtenArrays(state.schichten, incoming);
+      const { merged, added, updated } = mergeSchichtenGithubUpsert(state.schichten, incoming);
       state.schichten = merged;
-      showToast(`GitHub: ${added} neue Schicht(en) übernommen ✓`);
+      showToast(`GitHub: ${added} neu, ${updated} aktualisiert (gleiche IDs überschrieben) ✓`);
     }
     save();
     render();
   } catch (e) {
-    showToast("GitHub laden: " + e.message, "err");
+    const hint = githubAccessHint(e.status, e.message);
+    showToast("GitHub laden: " + e.message + (hint ? hint : ""), "err");
   }
 }
 
@@ -924,7 +1034,12 @@ async function unlockVaultFromUI() {
     state.schichten = normalizeSchichtenArray(inner.schichten);
     removeLegacyPlaintext();
     revealVaultApp();
-    save();
+    const snapBeforePull = JSON.stringify(state.schichten);
+    await githubStartupPullReplaceIfEnabled();
+    if (JSON.stringify(state.schichten) !== snapBeforePull) {
+      showToast("Aktueller Stand von GitHub geladen ✓");
+    }
+    await persistLocalThenQueueGithub();
     showToast("Tresor entsperrt ✓");
     bootstrapAfterUnlock();
   } catch (_) {
@@ -950,9 +1065,11 @@ async function setupVaultFromUI() {
   vaultSaltB64 = u8ToB64(salt);
   sessionVaultKey = await deriveVaultKey(p1, salt);
   state.schichten = initial;
-  await persistEncrypted();
   removeLegacyPlaintext();
   revealVaultApp();
+  await githubStartupPullReplaceIfEnabled();
+  await persistEncrypted();
+  queueGithubPushSerialized();
   showToast("Tresor eingerichtet ✓");
   bootstrapAfterUnlock();
 }
@@ -991,7 +1108,7 @@ function initVaultGate() {
     if (p2) p2.style.display = "none";
     if (btn) {
       btn.textContent = "Ohne Schutz fortfahren";
-      btn.onclick = () => bootstrapLegacyInsecure();
+      btn.onclick = () => void bootstrapLegacyInsecure();
     }
   } else {
     const legacy = !!localStorage.getItem(STORAGE_KEY);
@@ -1006,13 +1123,15 @@ function initVaultGate() {
   }
 }
 
-function bootstrapLegacyInsecure() {
+async function bootstrapLegacyInsecure() {
   try {
     const leg = localStorage.getItem(STORAGE_KEY);
     if (leg) state.schichten = normalizeSchichtenArray(JSON.parse(leg));
   } catch (_) {}
   revealVaultApp();
+  await githubStartupPullReplaceIfEnabled();
   saveLegacyPlainIfNeeded();
+  queueGithubPushSerialized();
   bootstrapAfterUnlock();
 }
 
