@@ -402,7 +402,7 @@
     <div class="vault-brand">Schichten-Tresor</div>
     <div id="vault-subtle-warn" class="vault-warn">Verschlüsselung nicht verfügbar (z. B. bei file://). Bitte die Seite über einen lokalen Server oder HTTPS öffnen.</div>
     <p id="vault-msg" class="vault-msg">…</p>
-    <input type="password" id="vault-pw1" autocomplete="current-password" placeholder="Passwort"/>
+    <input type="password" id="vault-pw1" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" enterkeyhint="go" placeholder="Passwort"/>
     <button type="button" class="btn-primary" id="vault-submit">…</button>
   </div>
 </div>
@@ -1191,16 +1191,70 @@ function vaultToast(msg, err) {
   } else showToast(msg, err ? "err" : "ok");
 }
 
+/**
+ * Lokaler Tresor passt nicht zum aktuellen Zentralpasswort (Alter Stand / iOS-Cache / beschädigt).
+ * Speicher leeren, neu mit diesem Passwort verschlüsseln, Schichten von GitHub holen wenn möglich.
+ */
+async function vaultRecoverFreshSession(pw) {
+  if (!cryptoSubtleOk() || pw !== CENTRAL_VAULT_PASSWORD) return;
+  sessionVaultKey = null;
+  vaultSaltB64 = null;
+  try {
+    localStorage.removeItem(STORAGE_ENC_KEY);
+    localStorage.removeItem(STORAGE_KEY);
+  } catch (_) {}
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  vaultSaltB64 = u8ToB64(salt);
+  sessionVaultKey = await deriveVaultKey(pw, salt);
+  state.schichten = [];
+  removeLegacyPlaintext();
+  revealVaultApp();
+  const snapBeforePull = JSON.stringify(state.schichten);
+  await githubStartupPullReplaceIfEnabled();
+  const pulled = JSON.stringify(state.schichten) !== snapBeforePull;
+  await persistEncrypted();
+  queueGithubPushSerialized();
+  showToast(
+    pulled
+      ? "Neuer lokaler Tresor — Stand von GitHub geladen ✓"
+      : "Neuer lokaler Tresor — weiter ohne gespeicherte Schichten (GitHub nicht erreichbar oder leer)."
+  );
+  bootstrapAfterUnlock();
+}
+
+function vaultParseEncEnv(raw) {
+  if (!raw || typeof raw !== "string") return null;
+  let env;
+  try {
+    env = JSON.parse(raw);
+  } catch (_) {
+    return null;
+  }
+  if (!env || typeof env !== "object") return null;
+  if (!env.salt || !env.iv || !env.ciphertext) return null;
+  return env;
+}
+
 async function unlockVaultFromUI() {
   if (!cryptoSubtleOk()) return;
-  const raw = localStorage.getItem(STORAGE_ENC_KEY);
-  const env = JSON.parse(raw);
   const pw = document.getElementById("vault-pw1").value;
-  if (!pw) { vaultToast("Passwort eingeben", true); return; }
+  if (!pw) {
+    vaultToast("Passwort eingeben", true);
+    return;
+  }
   if (pw !== CENTRAL_VAULT_PASSWORD) {
     vaultToast("Passwort falsch.", true);
     return;
   }
+
+  const raw = localStorage.getItem(STORAGE_ENC_KEY);
+  const env = vaultParseEncEnv(raw);
+
+  if (!env) {
+    await vaultRecoverFreshSession(pw);
+    return;
+  }
+
   try {
     const saltU8 = b64ToU8(env.salt);
     vaultSaltB64 = env.salt;
@@ -1221,7 +1275,7 @@ async function unlockVaultFromUI() {
   } catch (_) {
     sessionVaultKey = null;
     vaultSaltB64 = null;
-    vaultToast("Falsches Passwort oder beschädigte Daten.", true);
+    await vaultRecoverFreshSession(pw);
   }
 }
 
@@ -1567,7 +1621,7 @@ function mergeRunsInCells(x) {
 
 /** z. B. 14_04_26_Tageseinsatznachweis_NilsWeinandy.docx — bei mehreren am Tag: …_2.docx */
 function docxDownloadFilename(datumDE, sameDayIndex) {
-  const stem = datumDE.replace(/\./g, ".") + "_Tageseinsatznachweis_NilsWeinandy";
+  const stem = datumDE.replace(/\./g, "_") + "_Tageseinsatznachweis_NilsWeinandy";
   return sameDayIndex <= 1 ? stem + ".docx" : stem + "_" + sameDayIndex + ".docx";
 }
 
