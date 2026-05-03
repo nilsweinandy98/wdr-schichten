@@ -1,6 +1,87 @@
 {
-  "format": "wdr-access",
-  "v": 1,
-  "vaultPwSha256": "bcb6331f7f9fcb0dfc7d64438bd69d633466d4271b8d6fd21c164f52d15e6008",
-  "savedISO": "2026-05-03"
+  "app": "wdr-schichten",
+  "format": "schichten-plain",
+  "savedISO": "2026-05-03",
+  "schichten": [
+    {
+      "id": "5dzs9a2d",
+      "datum": "2026-05-03",
+      "typ": "ZePrA 1",
+      "beginn": "06:30",
+      "ende": "14:42",
+      "status": "ausstehend"
+    },
+    {
+      "id": "9nvnjboe",
+      "datum": "2026-03-17",
+      "typ": "ZePrA 4",
+      "beginn": "14:15",
+      "ende": "22:27",
+      "status": "ausstehend",
+      "feiertagOverride": null
+    },
+    {
+      "id": "63epcdnl",
+      "datum": "2026-03-24",
+      "typ": "ZePrA 2",
+      "beginn": "08:00",
+      "ende": "15:12",
+      "status": "abgerechnet",
+      "feiertagOverride": null
+    },
+    {
+      "id": "wuxwc8zq",
+      "datum": "2026-03-29",
+      "typ": "ZePrA WE 3",
+      "beginn": "15:00",
+      "ende": "23:12",
+      "status": "abgerechnet",
+      "feiertagOverride": null
+    },
+    {
+      "id": "r4pgh8os",
+      "datum": "2026-04-07",
+      "typ": "ZePrA 1",
+      "beginn": "06:30",
+      "ende": "14:42",
+      "status": "ausstehend",
+      "feiertagOverride": null
+    },
+    {
+      "id": "p9nuphih",
+      "datum": "2026-04-10",
+      "typ": "ZePrA 2",
+      "beginn": "08:00",
+      "ende": "15:12",
+      "status": "ausstehend",
+      "feiertagOverride": null
+    },
+    {
+      "id": "ok5ljkdq",
+      "datum": "2026-04-14",
+      "typ": "ZePrA 5",
+      "beginn": "15:00",
+      "ende": "23:12",
+      "status": "ausstehend",
+      "feiertagOverride": null
+    },
+    {
+      "id": "2ufuhsam",
+      "datum": "2026-05-03",
+      "typ": "ZePrA WE 2",
+      "beginn": "12:00",
+      "ende": "20:12",
+      "status": "ausstehend",
+      "feiertagOverride": null
+    },
+    {
+      "id": "tvsalcgx",
+      "datum": "2026-05-02",
+      "typ": "ZePrA WE 2",
+      "beginn": "12:00",
+      "ende": "20:12",
+      "status": "ausstehend",
+      "feiertagOverride": null
+    }
+  ]
 }
