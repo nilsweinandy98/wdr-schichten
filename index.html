@@ -1567,7 +1567,7 @@ function mergeRunsInCells(x) {
 
 /** z. B. 14_04_26_Tageseinsatznachweis_NilsWeinandy.docx — bei mehreren am Tag: …_2.docx */
 function docxDownloadFilename(datumDE, sameDayIndex) {
-  const stem = datumDE.replace(/\./g, "_") + "_Tageseinsatznachweis_NilsWeinandy";
+  const stem = datumDE.replace(/\./g, "-") + "_Tageseinsatznachweis_NilsWeinandy";
   return sameDayIndex <= 1 ? stem + ".docx" : stem + "_" + sameDayIndex + ".docx";
 }
 
