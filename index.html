@@ -652,35 +652,29 @@ async function downloadDocx(schicht) {
   if (!docFile) throw new Error("word/document.xml nicht im Template gefunden.");
   let xml = await docFile.async("string");
 
-  // 3. Find the data row in the shift table and replace values.
-  // The template has one filled data row with the original date/time/typ.
-  // Strategy: replace the FIRST data row that contains a date pattern DD.MM.YY
-  // We do a targeted replacement of the 5-cell data row.
-
-  // Find existing values from template to replace
-  // Date pattern: any DD.MM.YY in a table cell
-  const datumMatch = xml.match(/<w:t>(\d{2}\.\d{2}\.\d{2})<\/w:t>/);
-  if (!datumMatch) throw new Error("Kein Datum im Template gefunden. Bitte template.docx prüfen.");
-  const oldDatum = datumMatch[1];
-
-  // Find beginn/ende: look for time patterns HH:MM near the datum row
-  const timeMatches = [...xml.matchAll(/<w:t>(\d{2}:\d{2})<\/w:t>/g)];
-  if (timeMatches.length < 2) throw new Error("Keine Zeiten im Template gefunden.");
-  const oldBeginn = timeMatches[0][1];
-  const oldEnde   = timeMatches[1][1];
-
-  // Find typ: the cell after the two time cells — search for known shift types
-  const typMatch = xml.match(/<w:t>(ZePrA[^<]+|Apaka[^<]+)<\/w:t>/);
-  if (!typMatch) throw new Error("Kein Schichttyp im Template gefunden.");
-  const oldTyp = typMatch[1];
-
-  // 4. Replace — only first occurrence of each to avoid touching header rows
+  // 3. Replace placeholders {{DATUM}}, {{BEGINN}}, {{ENDE}}, {{TYP}}
+  // These were placed in the template by make_template.py
   const esc = s => String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 
-  xml = xml.replace(`<w:t>${oldDatum}</w:t>`, `<w:t>${esc(datum)}</w:t>`);
-  xml = xml.replace(`<w:t>${oldBeginn}</w:t>`, `<w:t>${esc(beginn)}</w:t>`);
-  xml = xml.replace(`<w:t>${oldEnde}</w:t>`, `<w:t>${esc(ende)}</w:t>`);
-  xml = xml.replace(`<w:t>${oldTyp}</w:t>`, `<w:t>${esc(typ)}</w:t>`);
+  const hasDatum  = xml.includes("{{DATUM}}");
+  const hasBeginn = xml.includes("{{BEGINN}}");
+  const hasEnde   = xml.includes("{{ENDE}}");
+  const hasTyp    = xml.includes("{{TYP}}");
+
+  if (!hasDatum || !hasBeginn || !hasEnde || !hasTyp) {
+    const missing = [
+      !hasDatum  && "{{DATUM}}",
+      !hasBeginn && "{{BEGINN}}",
+      !hasEnde   && "{{ENDE}}",
+      !hasTyp    && "{{TYP}}",
+    ].filter(Boolean).join(", ");
+    throw new Error(`Platzhalter fehlen im Template: ${missing}\n\nBitte make_template.py auf dem Mac ausführen und die neue template.docx hochladen.`);
+  }
+
+  xml = xml.replaceAll("{{DATUM}}",  esc(datum));
+  xml = xml.replaceAll("{{BEGINN}}", esc(beginn));
+  xml = xml.replaceAll("{{ENDE}}",   esc(ende));
+  xml = xml.replaceAll("{{TYP}}",    esc(typ));
 
   // 5. Write back and rezip
   zip.file("word/document.xml", xml);
