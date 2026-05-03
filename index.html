@@ -653,8 +653,44 @@ async function downloadDocx(schicht) {
   if (!docFile) throw new Error("word/document.xml nicht im Template gefunden.");
   let xml = await docFile.async("string");
 
-  // 3. Replace placeholders {{DATUM}}, {{BEGINN}}, {{ENDE}}, {{TYP}}
-  // These were placed in the template by make_template.py
+  // 3. Word splits text across multiple <w:r> runs internally.
+  // We merge adjacent runs within each table cell first, then replace placeholders.
+  // This handles cases like XX + BEGINN + XX being stored as 3 separate runs.
+
+  function mergeRunsInCells(x) {
+    // For each table cell, concatenate all w:t text into the first run,
+    // but only if the combined text contains one of our placeholders.
+    return x.replace(/(<w:tc>[\s\S]*?<\/w:tc>)/g, cell => {
+      // Extract all runs with their text
+      const runTexts = [];
+      const runRegex = /<w:r[ >][\s\S]*?<\/w:r>/g;
+      let combined = "";
+      const runs = [...cell.matchAll(/<w:r([ >][\s\S]*?)<\/w:r>/g)];
+      if (runs.length < 2) return cell; // nothing to merge
+
+      // Get all text content from w:t tags in this cell
+      const allText = [...cell.matchAll(/<w:t[^>]*>([^<]*)<\/w:t>/g)]
+        .map(m => m[1]).join("");
+
+      // Only merge if a placeholder is present in combined text
+      const placeholders = ["XXDATUMXX","XXBEGINNXX","XXENDEXX","XXTYPXX"];
+      if (!placeholders.some(p => allText.includes(p))) return cell;
+
+      // Find the placeholder in combined text
+      const ph = placeholders.find(p => allText.includes(p));
+
+      // Replace ALL w:t content in this cell: put placeholder in first w:t, empty the rest
+      let replaced = false;
+      let newCell = cell.replace(/<w:t[^>]*>[^<]*<\/w:t>/g, match => {
+        if (!replaced) { replaced = true; return `<w:t>${allText}</w:t>`; }
+        return `<w:t></w:t>`;
+      });
+      return newCell;
+    });
+  }
+
+  xml = mergeRunsInCells(xml);
+
   const esc = s => String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 
   const hasDatum  = xml.includes("XXDATUMXX");
@@ -669,7 +705,10 @@ async function downloadDocx(schicht) {
       !hasEnde   && "XXENDEXX",
       !hasTyp    && "XXTYPXX",
     ].filter(Boolean).join(", ");
-    throw new Error(`Platzhalter fehlen im Template: ${missing} — bitte template.docx prüfen.`);
+    // Debug: show what text IS in the cells
+    const cellTexts = [...xml.matchAll(/<w:t[^>]*>([^<]{2,})<\/w:t>/g)]
+      .map(m=>m[1]).filter(t=>t.includes("XX")).join(" | ");
+    throw new Error(`Platzhalter nicht gefunden: ${missing}\nGefundene XX-Texte: ${cellTexts||"keine"}`);
   }
 
   xml = xml.replaceAll("XXDATUMXX",  esc(datum));
