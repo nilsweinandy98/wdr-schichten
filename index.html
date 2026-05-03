@@ -159,6 +159,47 @@
   .f-btn.active .f-badge { background: rgba(255,255,255,0.2); }
 
   .list { display: flex; flex-direction: column; gap: 8px; }
+  .list-day-header {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: 0.02em;
+    padding: 12px 6px 6px;
+    margin: 4px 0 2px;
+    border-bottom: 2px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px;
+  }
+  .list-day-header .list-day-wd { color: var(--muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; }
+  .list-day-header.list-day-weekend { background: rgba(124, 58, 237, 0.06); border-radius: 10px 10px 0 0; border-bottom-color: #e9d5ff; }
+  .list-now-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 16px 0 14px;
+    flex-shrink: 0;
+  }
+  .list-now-line {
+    flex: 1;
+    height: 2px;
+    background: var(--red);
+    border-radius: 1px;
+    min-width: 12px;
+  }
+  .list-now-badge {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 800;
+    color: #fff;
+    background: var(--red);
+    padding: 5px 12px;
+    border-radius: 999px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    flex-shrink: 0;
+  }
   .list-hint {
     font-size: 12px;
     color: var(--muted);
@@ -217,6 +258,15 @@
   .s-card.s-done .s-pay { color: var(--muted); }
   .s-card.s-done .s-pay-val { color: var(--muted); }
   .s-card.s-done .s-pay-bonus { color: #64748b; }
+  .s-card.s-weekend:not(.s-done) {
+    background: linear-gradient(135deg, #faf5ff 0%, #f8fafc 55%);
+    border: 1px solid rgba(124, 58, 237, 0.14);
+    box-shadow: 0 1px 3px rgba(124, 58, 237, 0.06);
+  }
+  .s-card.s-weekend.s-done {
+    background: #ede9fe;
+    border-color: #ddd6fe;
+  }
   @keyframes fadeUp { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
   .s-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; gap: 8px; }
   .s-datum { font-family: var(--font-mono); font-size: 17px; font-weight: 600; color: var(--text); }
@@ -230,9 +280,10 @@
   .s-pill { border: none; border-radius: 20px; padding: 4px 10px; font-size: 11px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px; font-family: var(--font-sans); -webkit-tap-highlight-color: transparent; }
   .s-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
 
-  .s-mid { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-  .s-typ { font-size: 14px; font-weight: 700; }
-  .s-zeit { font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
+  .s-mid { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; gap: 10px; }
+  .s-typ { font-size: 15px; font-weight: 800; letter-spacing: -0.02em; }
+  .s-zeit { font-family: var(--font-mono); font-size: 12px; color: var(--text); font-weight: 600; text-align: right; line-height: 1.35; }
+  .s-zeit-sub { display: block; font-size: 10px; font-weight: 600; color: var(--muted); margin-top: 2px; }
 
   .s-pay {
     display: flex;
@@ -388,7 +439,7 @@
 
 <main>
   <div class="earn-card">
-    <div class="earn-label">Offen (noch nicht abgerechnet)</div>
+    <div class="earn-label">Offen · bis heute (bereits gearbeitet)</div>
     <div class="earn-amount"><span class="currency">€</span><span id="earn-total">0,00</span></div>
     <div class="earn-breakdown">
       <div class="earn-item">
@@ -443,6 +494,7 @@
     <div class="daten-row">
       <button type="button" class="btn-outline" onclick="exportSchichtenBackup()">Backup speichern (.json)</button>
       <label class="btn-outline daten-file-btn">Backup einspielen<input type="file" accept="application/json,.json" class="visually-hidden" id="import-schichten-input"/></label>
+      <button type="button" class="btn-outline" onclick="openBulkDownloadSheet()">Bulk-Download DOCX</button>
     </div>
   </div>
 
@@ -475,25 +527,58 @@
   </div>
 </div>
 
+<div class="overlay" id="overlay-bulk" onclick="closeSheet('bulk')">
+  <div class="sheet" onclick="event.stopPropagation()" style="padding:10px 20px 40px;max-height:90vh;overflow:auto">
+    <div class="handle"></div>
+    <p style="font-size:16px;font-weight:700;margin:8px 0">Bulk-Download DOCX</p>
+    <p style="font-size:13px;color:#64748b;margin-bottom:16px;line-height:1.45">ZIP mit mehreren ausgefüllten Nachweisen. Standard: alle Schichten bis heute mit Status „Ausstehend“ oder „Mail raus“ im gewählten Zeitraum.</p>
+    <label class="d-label" for="bulk-from">Von</label>
+    <input type="date" class="d-input" id="bulk-from"/>
+    <label class="d-label" for="bulk-to">Bis</label>
+    <input type="date" class="d-input" id="bulk-to"/>
+    <label style="display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text);margin:12px 0 18px;cursor:pointer;font-weight:600">
+      <input type="checkbox" id="bulk-only-open" checked/> Nur Ausstehend &amp; Mail raus
+    </label>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <button type="button" class="btn-primary" id="bulk-dl-btn" onclick="runBulkDocxDownload()">ZIP herunterladen</button>
+      <button type="button" class="btn-outline" onclick="closeSheet('bulk')">Schließen</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
 /** Versionsdatum dieser HTML-Datei (TT.MM.JJ); bei Änderungen anpassen */
-const APP_BUILD_STAMP = "03.05.26 · gh-read-anon";
+const APP_BUILD_STAMP = "03.05.26 · schicht812-ui-bulk";
+
+/** Jede Schicht: Dauer exakt 8h 12min ab Beginn (Ende wird berechnet). */
+const SCHICHT_DAUER_MIN = 8 * 60 + 12;
+
+function endeNach812(beginn) {
+  const parts = String(beginn || "06:30").split(":");
+  const bh = parseInt(parts[0], 10) || 0;
+  const bm = parseInt(parts[1], 10) || 0;
+  let t = bh * 60 + bm + SCHICHT_DAUER_MIN;
+  t = ((t % (24 * 60)) + 24 * 60) % (24 * 60);
+  const eh = Math.floor(t / 60);
+  const em = t % 60;
+  return String(eh).padStart(2, "0") + ":" + String(em).padStart(2, "0");
+}
 
 const SCHICHTEN = [
-  { typ: "ZePrA 1",      beginn: "06:30", ende: "14:42" },
-  { typ: "ZePrA 2",      beginn: "08:00", ende: "15:12" },
-  { typ: "ZePrA 4",      beginn: "14:15", ende: "22:27" },
-  { typ: "ZePrA 5",      beginn: "15:00", ende: "23:12" },
-  { typ: "ZePrA Nacht",  beginn: "22:45", ende: "06:57" },
-  { typ: "ZePrA MLD",    beginn: "11:00", ende: "19:12" },
-  { typ: "ZePrA WE 1",   beginn: "08:00", ende: "14:42" },
-  { typ: "ZePrA WE 2",   beginn: "12:00", ende: "20:12" },
-  { typ: "ZePrA WE 3",   beginn: "15:00", ende: "23:12" },
-  { typ: "ZePrA WE S",   beginn: "10:00", ende: "18:12" },
-  { typ: "Apaka 7",      beginn: "07:00", ende: "15:12" },
-  { typ: "Apaka 11",     beginn: "11:00", ende: "19:12" },
+  { typ: "ZePrA 1",      beginn: "06:30" },
+  { typ: "ZePrA 2",      beginn: "08:00" },
+  { typ: "ZePrA 4",      beginn: "14:15" },
+  { typ: "ZePrA 5",      beginn: "15:00" },
+  { typ: "ZePrA Nacht",  beginn: "22:45" },
+  { typ: "ZePrA MLD",    beginn: "11:00" },
+  { typ: "ZePrA WE 1",   beginn: "08:00" },
+  { typ: "ZePrA WE 2",   beginn: "12:00" },
+  { typ: "ZePrA WE 3",   beginn: "15:00" },
+  { typ: "ZePrA WE S",   beginn: "10:00" },
+  { typ: "Apaka 7",      beginn: "07:00" },
+  { typ: "Apaka 11",     beginn: "11:00" },
 ];
 
 const HONORAR_TAG = 245;
@@ -647,12 +732,19 @@ function bufToB64(buf) {
   return u8ToB64(new Uint8Array(buf));
 }
 
+function templateBeginForTyp(typ) {
+  const row = SCHICHTEN.find(t => t.typ === typ);
+  return row ? row.beginn : SCHICHTEN[0].beginn;
+}
+
 function normalizeSchichtRow(s) {
   const iso = datumToISO(s.datum);
   let status = s.status;
   if (status === "generiert") status = "mail";
   if (!STATUS[status]) status = "ausstehend";
-  return { ...s, datum: iso, status };
+  const beginn = (s.beginn && String(s.beginn).trim()) || templateBeginForTyp(s.typ);
+  const ende = endeNach812(beginn);
+  return { ...s, datum: iso, status, beginn, ende };
 }
 
 function normalizeSchichtenArray(arr) {
@@ -1329,10 +1421,26 @@ function isoToDate(iso) {
 }
 
 const DAYS_SHORT = ["So","Mo","Di","Mi","Do","Fr","Sa"];
+const DAYS_LONG = ["Sonntag","Montag","Dienstag","Mittwoch","Donnerstag","Freitag","Samstag"];
 function dayName(iso) {
   const dt = isoToDate(iso);
   if (isNaN(dt.getTime())) return "–";
   return DAYS_SHORT[dt.getDay()];
+}
+function dayNameLong(iso) {
+  const dt = isoToDate(iso);
+  if (isNaN(dt.getTime())) return "";
+  return DAYS_LONG[dt.getDay()];
+}
+function isWeekendDay(iso) {
+  const dt = isoToDate(iso);
+  if (isNaN(dt.getTime())) return false;
+  const d = dt.getDay();
+  return d === 0 || d === 6;
+}
+/** Kalendertag bereits erreicht (Schicht zählt zur Summe oben). */
+function isDatumPastOrToday(iso) {
+  return isDatumISO(iso) && iso <= todayISO();
 }
 
 function isSunday(iso) {
@@ -1355,7 +1463,11 @@ function syncDEFromPicker() {
   inp.value = isoToDe(pk.value);
 }
 
-function getInfo(typ) { return SCHICHTEN.find(s=>s.typ===typ)||SCHICHTEN[0]; }
+function getInfo(typ) {
+  const row = SCHICHTEN.find(s => s.typ === typ) || SCHICHTEN[0];
+  const beginn = row.beginn;
+  return { typ: row.typ, beginn, ende: endeNach812(beginn) };
+}
 
 function sortedByDatumAsc(arr) {
   return [...arr].sort((a,b) => isoToDate(a.datum) - isoToDate(b.datum));
@@ -1380,7 +1492,9 @@ function hiddenAbgerechnetCount() {
 }
 
 function aggregateHonorarOpen() {
-  const open = state.schichten.filter(s => s.status !== "abgerechnet");
+  const open = state.schichten.filter(
+    s => s.status !== "abgerechnet" && isDatumPastOrToday(s.datum)
+  );
   let grund = 0;
   let zuFeiertag = 0;
   let zuSonntag = 0;
@@ -1472,13 +1586,8 @@ function mergeRunsInCells(x) {
   });
 }
 
-async function downloadDocx(schicht) {
+async function buildDocxBlobFromBuffer(arrayBuffer, schicht, fnameSuffix) {
   const { datum, beginn, ende, typ } = schicht;
-
-  const resp = await fetch(TEMPLATE_URL);
-  if (!resp.ok) throw new Error("Template konnte nicht geladen werden (" + resp.status + ").");
-  const arrayBuffer = await resp.arrayBuffer();
-
   const zip = await JSZip.loadAsync(arrayBuffer);
   const docFile = zip.file("word/document.xml");
   if (!docFile) throw new Error("word/document.xml nicht im Template gefunden.");
@@ -1494,25 +1603,41 @@ async function downloadDocx(schicht) {
   }
 
   const datumDE = isoToDe(datum);
-  xml = xml.replaceAll("XXDATUMXX",  esc(datumDE));
+  xml = xml.replaceAll("XXDATUMXX", esc(datumDE));
   xml = xml.replaceAll("XXBEGINXX", esc(beginn));
   xml = xml.replaceAll("XXBEGINNXX", esc(beginn));
-  xml = xml.replaceAll("XXENDEXX",   esc(ende));
-  xml = xml.replaceAll("XXTYPXX",    esc(typ));
+  xml = xml.replaceAll("XXENDEXX", esc(ende));
+  xml = xml.replaceAll("XXTYPXX", esc(typ));
 
   zip.file("word/document.xml", xml);
   const blob = await zip.generateAsync({
     type: "blob",
     mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     compression: "DEFLATE",
-    compressionOptions: { level: 6 }
+    compressionOptions: { level: 6 },
   });
 
-  const fname = datumDE.replace(/\./g,"_") + "_Tageseinsatznachweis_NilsWeinandy.docx";
+  const safeTyp = String(typ).replace(/[^\wÄÖÜäöüß\-]+/g, "_").replace(/_+/g, "_").slice(0, 28);
+  const base = datumDE.replace(/\./g, "_") + "_" + safeTyp;
+  const fname =
+    fnameSuffix === "single"
+      ? base + "_Tageseinsatznachweis_NilsWeinandy.docx"
+      : base + "_" + String(schicht.id || "x").slice(0, 10) + ".docx";
+  return { blob, fname };
+}
+
+async function downloadDocx(schicht) {
+  const resp = await fetch(TEMPLATE_URL);
+  if (!resp.ok) throw new Error("Template konnte nicht geladen werden (" + resp.status + ").");
+  const arrayBuffer = await resp.arrayBuffer();
+  const { blob, fname } = await buildDocxBlobFromBuffer(arrayBuffer, schicht, "single");
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
-  a.href = url; a.download = fname; a.style.display = "none";
-  document.body.appendChild(a); a.click();
+  a.href = url;
+  a.download = fname;
+  a.style.display = "none";
+  document.body.appendChild(a);
+  a.click();
   document.body.removeChild(a);
   setTimeout(() => URL.revokeObjectURL(url), 2000);
 }
@@ -1528,7 +1653,9 @@ function render() {
 }
 
 function renderEarnings() {
-  const open = state.schichten.filter(s => s.status !== "abgerechnet");
+  const open = state.schichten.filter(
+    s => s.status !== "abgerechnet" && isDatumPastOrToday(s.datum)
+  );
   let base = 0, bonus = 0;
   for (const s of open) {
     const h = calcHonorar(s);
@@ -1566,7 +1693,8 @@ function renderTypGrid() {
 
 function renderZeit() {
   const info = getInfo(state.selTyp);
-  document.getElementById("zeit-preview").textContent = `${info.beginn} – ${info.ende} Uhr`;
+  document.getElementById("zeit-preview").textContent =
+    `${info.beginn} – ${info.ende} Uhr · 8 h 12 min`;
 }
 
 function renderFilter() {
@@ -1592,7 +1720,7 @@ function renderHonorarDetail() {
   if (a.open.length === 0) {
     box.innerHTML = `
       <div class="sec-label">Honorar offen (Detail)</div>
-      <p class="h-detail-note" style="margin-top:0">Keine offenen Schichten.</p>`;
+      <p class="h-detail-note" style="margin-top:0">Keine offenen Schichten bis heute — nur zukünftige oder bereits abgerechnete.</p>`;
     return;
   }
   const rows = [
@@ -1605,44 +1733,25 @@ function renderHonorarDetail() {
   rows.push(`<div class="h-detail-row sum"><span class="h-detail-k">Summe offen</span><span class="h-detail-v">${fmtEuro(a.total)} €</span></div>`);
   box.innerHTML = `
     <div class="sec-label">Honorar offen (Detail)</div>
-    <p class="h-detail-note" style="margin-top:0;margin-bottom:4px">Nur Schichten ohne „Abgerechnet“. Entspricht der Berechnung auf den Karten.</p>
+    <p class="h-detail-note" style="margin-top:0;margin-bottom:4px">Nur Schichten ohne „Abgerechnet“ mit Datum bis einschließlich heute (bereits geleistet). Spätere Termine stehen nicht in der Summe oben.</p>
     ${rows.join("")}
     <p class="h-detail-note">Übersicht zur Orientierung, keine rechts- oder steuerliche Beratung.</p>`;
 }
 
-function renderList() {
-  const hintEl = document.getElementById("list-hint");
-  const filtered = buildListForFilter(state.filter);
+function renderOneSchichtCard(s) {
+  const st = STATUS[s.status];
+  const isLoad = state.loading === s.id;
+  const h = calcHonorar(s);
+  const doneCls = s.status === "abgerechnet" ? " s-done" : "";
+  const weCls = isWeekendDay(s.datum) ? " s-weekend" : "";
 
-  if (hintEl) {
-    const hid = hiddenAbgerechnetCount();
-    if (state.filter === "alle" && hid > 0) {
-      hintEl.style.display = "block";
-      hintEl.textContent =
-        `Chronologisch (älteste oben). Unter „Alle“ siehst du alle offenen Schichten plus nur die ${SHOW_LAST_ABGERECHNET} zuletzt abgerechneten. ${hid} ältere abgerechnete Schicht${hid===1?" ist":"en sind"} ausgeblendet — Filter „Abgerechnet“ zeigt alle.`;
-    } else {
-      hintEl.style.display = "none";
-    }
-  }
+  const tags = [];
+  if (h.hol) tags.push(`<span class="s-tag s-tag-holiday">Feiertag +100%</span>`);
+  else if (h.sun) tags.push(`<span class="s-tag s-tag-sun">Sonntag +50%</span>`);
+  if (h.nachtH > 0) tags.push(`<span class="s-tag s-tag-night">Nacht +25%</span>`);
 
-  if (filtered.length===0) {
-    document.getElementById("list").innerHTML = `<div class="empty">Keine Schichten${state.filter!=="alle"?` mit Status „${state.filter}"`:""}.</div>`;
-    return;
-  }
-
-  document.getElementById("list").innerHTML = filtered.map(s=>{
-    const st = STATUS[s.status];
-    const isLoad = state.loading===s.id;
-    const h = calcHonorar(s);
-    const doneCls = s.status === "abgerechnet" ? " s-done" : "";
-
-    const tags = [];
-    if (h.hol) tags.push(`<span class="s-tag s-tag-holiday">Feiertag +100%</span>`);
-    else if (h.sun) tags.push(`<span class="s-tag s-tag-sun">Sonntag +50%</span>`);
-    if (h.nachtH > 0) tags.push(`<span class="s-tag s-tag-night">Nacht +25%</span>`);
-
-    return `
-    <div class="s-card${doneCls}">
+  return `
+    <div class="s-card${doneCls}${weCls}">
       <div class="s-top">
         <div>
           <span class="s-datum">${isoToDe(s.datum)}</span>
@@ -1655,7 +1764,7 @@ function renderList() {
       ${tags.length ? `<div class="s-tags" style="margin-bottom:8px">${tags.join("")}</div>` : ""}
       <div class="s-mid">
         <span class="s-typ">${s.typ}</span>
-        <span class="s-zeit">${s.beginn}–${s.ende}</span>
+        <span class="s-zeit">${s.beginn} – ${s.ende} Uhr<span class="s-zeit-sub">8 h 12 min</span></span>
       </div>
       <div class="s-pay">
         <span class="s-pay-label">Honorar</span>
@@ -1665,13 +1774,65 @@ function renderList() {
         </span>
       </div>
       <div class="s-acts">
-        <button type="button" class="btn-dl" onclick="handleDownload('${s.id}')" ${isLoad?"disabled":""} style="opacity:${isLoad?0.7:1}">
-          ${isLoad?'<span class="spin"></span> Erstelle…':'⬇ DOCX'}
+        <button type="button" class="btn-dl" onclick="handleDownload('${s.id}')" ${isLoad ? "disabled" : ""} style="opacity:${isLoad ? 0.7 : 1}">
+          ${isLoad ? '<span class="spin"></span> Erstelle…' : "⬇ DOCX"}
         </button>
         <button type="button" class="btn-del" onclick="askDelete('${s.id}')">✕</button>
       </div>
     </div>`;
-  }).join("");
+}
+
+function renderList() {
+  const hintEl = document.getElementById("list-hint");
+  const filtered = buildListForFilter(state.filter);
+
+  if (hintEl) {
+    const hid = hiddenAbgerechnetCount();
+    if (state.filter === "alle" && hid > 0) {
+      hintEl.style.display = "block";
+      hintEl.textContent =
+        `Chronologisch (älteste oben). Unter „Alle“ siehst du alle offenen Schichten plus nur die ${SHOW_LAST_ABGERECHNET} zuletzt abgerechneten. ${hid} ältere abgerechnete Schicht${hid === 1 ? " ist" : "en sind"} ausgeblendet — Filter „Abgerechnet“ zeigt alle. Die rote Linie mit „Jetzt“ trennt vergangene/heutige von geplanten Schichten.`;
+    } else {
+      hintEl.style.display = "none";
+    }
+  }
+
+  if (filtered.length === 0) {
+    document.getElementById("list").innerHTML = `<div class="empty">Keine Schichten${state.filter !== "alle" ? ` mit Status „${state.filter}"` : ""}.</div>`;
+    return;
+  }
+
+  const today = todayISO();
+  const frag = [];
+  let prevDatum = null;
+  const hasFuture = filtered.some(s => s.datum > today);
+  const nowRow =
+    `<div class="list-now-row" role="separator" aria-label="Ab hier geplante Schichten"><span class="list-now-line"></span><span class="list-now-badge">Jetzt</span><span class="list-now-line"></span></div>`;
+
+  if (hasFuture && filtered.length && filtered[0].datum > today) {
+    frag.push(nowRow);
+  }
+
+  for (let i = 0; i < filtered.length; i++) {
+    const s = filtered[i];
+    const prev = i > 0 ? filtered[i - 1] : null;
+
+    if (s.datum > today && prev && prev.datum <= today && hasFuture) {
+      frag.push(nowRow);
+    }
+
+    if (prevDatum !== s.datum) {
+      prevDatum = s.datum;
+      const wl = isWeekendDay(s.datum) ? " list-day-weekend" : "";
+      frag.push(
+        `<div class="list-day-header${wl}"><span>${isoToDe(s.datum)}</span><span class="list-day-wd">${dayNameLong(s.datum)}</span></div>`
+      );
+    }
+
+    frag.push(renderOneSchichtCard(s));
+  }
+
+  document.getElementById("list").innerHTML = frag.join("");
 }
 
 function selTyp(typ) {
@@ -1755,6 +1916,82 @@ function cycleStatus(id) {
   if (!s || !STATUS[s.status]) return;
   s.status = STATUS[s.status].next;
   save(); render();
+}
+
+function openBulkDownloadSheet() {
+  const today = todayISO();
+  const cand = state.schichten.filter(
+    s => s.datum <= today && (s.status === "ausstehend" || s.status === "mail")
+  );
+  const dates = cand.map(s => s.datum).sort();
+  const fromISO = dates.length ? dates[0] : today;
+  const fromEl = document.getElementById("bulk-from");
+  const toEl = document.getElementById("bulk-to");
+  const cb = document.getElementById("bulk-only-open");
+  if (fromEl) fromEl.value = fromISO;
+  if (toEl) toEl.value = today;
+  if (cb) cb.checked = true;
+  openSheet("bulk");
+}
+
+async function runBulkDocxDownload() {
+  const fromEl = document.getElementById("bulk-from");
+  const toEl = document.getElementById("bulk-to");
+  const fromISO = fromEl && fromEl.value;
+  const toISO = toEl && toEl.value;
+  if (!fromISO || !toISO) {
+    showToast("Bitte Von- und Bis-Datum wählen.", "err");
+    return;
+  }
+  if (fromISO > toISO) {
+    showToast("„Von“ muss vor oder gleich „Bis“ sein.", "err");
+    return;
+  }
+  const onlyOpen = document.getElementById("bulk-only-open").checked;
+  let list = state.schichten.filter(s => s.datum >= fromISO && s.datum <= toISO);
+  if (onlyOpen) list = list.filter(s => s.status === "ausstehend" || s.status === "mail");
+  list = sortedByDatumAsc(list);
+  if (!list.length) {
+    showToast("Keine Schichten im Zeitraum / Filter.", "err");
+    return;
+  }
+  const btn = document.getElementById("bulk-dl-btn");
+  if (btn) btn.disabled = true;
+  try {
+    const resp = await fetch(TEMPLATE_URL);
+    if (!resp.ok) throw new Error("Template konnte nicht geladen werden (" + resp.status + ").");
+    const buf = await resp.arrayBuffer();
+    const zip = new JSZip();
+    const used = new Set();
+    for (const schicht of list) {
+      let { blob, fname } = await buildDocxBlobFromBuffer(buf, schicht, "bulk");
+      while (used.has(fname)) {
+        fname = fname.replace(/\.docx$/, "_" + Math.random().toString(36).slice(2, 7) + ".docx");
+      }
+      used.add(fname);
+      zip.file(fname, blob);
+    }
+    const zblob = await zip.generateAsync({
+      type: "blob",
+      compression: "DEFLATE",
+      compressionOptions: { level: 6 },
+    });
+    const url = URL.createObjectURL(zblob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "wdr-nachweise_" + fromISO + "_bis_" + toISO + ".zip";
+    a.style.display = "none";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+    showToast("ZIP mit " + list.length + " Nachweisen ✓");
+    closeSheet("bulk");
+  } catch (e) {
+    showToast(e.message || String(e), "err");
+  } finally {
+    if (btn) btn.disabled = false;
+  }
 }
 
 async function handleDownload(id) {
