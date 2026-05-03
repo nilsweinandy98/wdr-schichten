@@ -436,14 +436,14 @@
 
   <div class="card gh-card">
     <div class="sec-label">GitHub Sync</div>
-    <p class="gh-note">Speichert eine <strong>verschlüsselte</strong> JSON-Datei in <strong>deinem</strong> Repo (über die GitHub-API). Überall dasselbe <strong>Sync-Kennwort</strong> und ein <strong>Personal Access Token</strong> (mit „Contents“ Schreibzugriff auf dieses Repo). Der Token landet nur lokal im Browser — <strong>nie ins Repo committen</strong>. Ist die Option unten aktiv, wird beim Öffnen der Seite der Stand von GitHub geladen und nach jeder Änderung ohne Verzögerung wieder hochgeladen — GitHub gilt dann als gemeinsame Referenz zwischen den Geräten.</p>
+    <p class="gh-note">Speichert eine <strong>verschlüsselte</strong> JSON-Datei in <strong>deinem</strong> Repo (über die GitHub-API). Verschlüsselung nutzt automatisch dein <strong>Tresor-Passwort</strong> aus der aktuellen Sitzung — kein zweites Kennwort nötig (optional nur, falls eine <strong>alte</strong> Repo-Datei noch mit früherem Sync-Passwort erstellt wurde). Ein <strong>Personal Access Token</strong> mit „Contents“ Schreibzugriff bleibt nötig; er liegt nur lokal im Browser — <strong>nie ins Repo committen</strong>. Ist die Option unten aktiv, wird beim Laden die neuste Version von GitHub geholt und nach jeder Änderung sofort wieder hochgeladen.</p>
     <div class="gh-grid">
       <div><label for="gh-owner">Owner / Organisation</label><input id="gh-owner" type="text" placeholder="nilsweinandy98" autocomplete="off"/></div>
       <div><label for="gh-repo">Repo-Name</label><input id="gh-repo" type="text" placeholder="wdr-schichten" autocomplete="off"/></div>
       <div><label for="gh-path">Dateipfad im Repo</label><input id="gh-path" type="text" placeholder="data/schichten-sync.enc.json" autocomplete="off"/></div>
       <div><label for="gh-branch">Branch</label><input id="gh-branch" type="text" placeholder="main" autocomplete="off"/></div>
       <div><label for="gh-token">GitHub Token (PAT)</label><input id="gh-token" type="password" placeholder="" autocomplete="off"/></div>
-      <div><label for="gh-sync-pw">Sync-Kennwort (überall gleich)</label><input id="gh-sync-pw" type="password" placeholder="" autocomplete="new-password"/></div>
+      <div><label for="gh-sync-pw">Optionales Repo-Kennwort (nur Legacy)</label><input id="gh-sync-pw" type="password" placeholder="" autocomplete="new-password"/></div>
     </div>
     <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);margin-bottom:10px;cursor:pointer">
       <input type="checkbox" id="gh-autosync" checked/> Beim Öffnen von GitHub laden &amp; nach jeder Änderung sofort hochladen (empfohlen für mehrere Geräte)
@@ -477,7 +477,7 @@
 
 <script>
 /** Versionsdatum dieser HTML-Datei (TT.MM.JJ); bei Änderungen anpassen */
-const APP_BUILD_STAMP = "03.05.26";
+const APP_BUILD_STAMP = "03.05.26 · session+gh";
 
 const SCHICHTEN = [
   { typ: "ZePrA 1",      beginn: "06:30", ende: "14:42" },
@@ -513,6 +513,10 @@ const STORAGE_KEY = "wdr-v5";
 const STORAGE_GH_CONFIG = "wdr-gh-config";
 const STORAGE_GH_TOKEN = "wdr-gh-token";
 const STORAGE_GH_SYNC_PW = "wdr-gh-sync-passphrase";
+/** Tresor-Sitzung: ohne erneute Passwort-Eingabe (nur dieses Browser-Tab/Fenster, bis Abgelaufen). */
+const VAULT_SESSION_PW_KEY = "wdr-vault-session-pw";
+const VAULT_SESSION_ACT_KEY = "wdr-vault-session-act";
+const VAULT_SESSION_IDLE_MS = 10 * 60 * 1000;
 const PBKDF2_ITERATIONS = 210000;
 /** Bei Ansicht „Alle“: nur so viele zuletzt abgerechnete Schichten mit anzeigen */
 const SHOW_LAST_ABGERECHNET = 3;
@@ -534,6 +538,124 @@ let state = {
 
 let sessionVaultKey = null;
 let vaultSaltB64 = null;
+let vaultIdleInterval = null;
+
+function vaultSessionTouch() {
+  try {
+    sessionStorage.setItem(VAULT_SESSION_ACT_KEY, String(Date.now()));
+  } catch (_) {}
+}
+
+function vaultSessionRemember(pw) {
+  try {
+    sessionStorage.setItem(VAULT_SESSION_PW_KEY, pw);
+    vaultSessionTouch();
+  } catch (_) {}
+}
+
+function vaultSessionClear() {
+  try {
+    sessionStorage.removeItem(VAULT_SESSION_PW_KEY);
+    sessionStorage.removeItem(VAULT_SESSION_ACT_KEY);
+  } catch (_) {}
+}
+
+function getVaultSessionPasswordRaw() {
+  try {
+    return sessionStorage.getItem(VAULT_SESSION_PW_KEY) || "";
+  } catch (_) {
+    return "";
+  }
+}
+
+function vaultSessionActivityFresh() {
+  try {
+    const t = parseInt(sessionStorage.getItem(VAULT_SESSION_ACT_KEY), 10);
+    if (!t || Number.isNaN(t)) return false;
+    return Date.now() - t < VAULT_SESSION_IDLE_MS;
+  } catch (_) {
+    return false;
+  }
+}
+
+/**
+ * GitHub-Datei verschlüsseln/öffnen: zuerst optional gespeichertes Legacy-Sync-Kennwort (alte Repos),
+ * sonst Tresor-Passwort aus der Sitzung — kein zweites Feld nötig, wenn Legacy leer ist.
+ */
+function getGithubCryptoPassphrase() {
+  const legacy = getGhSyncPassphrase();
+  if (legacy) return legacy;
+  return getVaultSessionPasswordRaw();
+}
+
+let vaultActivityListenersArmed = false;
+function armVaultActivityListenersOnce() {
+  if (vaultActivityListenersArmed) return;
+  vaultActivityListenersArmed = true;
+  let deb;
+  const bump = () => {
+    if (sessionVaultKey) vaultSessionTouch();
+  };
+  const schedule = () => {
+    clearTimeout(deb);
+    deb = setTimeout(bump, 400);
+  };
+  ["pointerdown", "keydown", "scroll"].forEach(ev => {
+    document.addEventListener(ev, schedule, { passive: true, capture: true });
+  });
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") schedule();
+  });
+}
+
+function startVaultIdleWatcher() {
+  if (vaultIdleInterval) {
+    clearInterval(vaultIdleInterval);
+    vaultIdleInterval = null;
+  }
+  vaultIdleInterval = setInterval(() => {
+    if (!sessionVaultKey) return;
+    if (!vaultSessionActivityFresh()) {
+      showToast("Tresor: 10 Min. ohne Nutzung — bitte erneut entsperren.", "err");
+      lockVault();
+    }
+  }, 12000);
+}
+
+function startVaultSessionMaintenance() {
+  if (!sessionVaultKey) return;
+  armVaultActivityListenersOnce();
+  vaultSessionTouch();
+  startVaultIdleWatcher();
+}
+
+async function tryVaultAutoUnlockFromSession() {
+  if (!cryptoSubtleOk()) return false;
+  const enc = localStorage.getItem(STORAGE_ENC_KEY);
+  if (!enc) return false;
+  const pw = getVaultSessionPasswordRaw();
+  if (!pw) return false;
+  if (!vaultSessionActivityFresh()) {
+    vaultSessionClear();
+    return false;
+  }
+  try {
+    const env = JSON.parse(enc);
+    const saltU8 = b64ToU8(env.salt);
+    vaultSaltB64 = env.salt;
+    const iters = env.pbkdf2Iterations || PBKDF2_ITERATIONS;
+    sessionVaultKey = await deriveVaultKey(pw, saltU8, iters);
+    const inner = await decryptVaultInner(sessionVaultKey, env.iv, env.ciphertext);
+    state.schichten = normalizeSchichtenArray(inner.schichten);
+    vaultSessionTouch();
+    return true;
+  } catch (_) {
+    sessionVaultKey = null;
+    vaultSaltB64 = null;
+    vaultSessionClear();
+    return false;
+  }
+}
 
 function cryptoSubtleOk() {
   return !!(window.crypto && window.crypto.subtle);
@@ -654,15 +776,15 @@ function mergeSchichtenGithubUpsert(existing, incoming) {
 
 function githubSyncFullyConfigured() {
   const cfg = getGhConfigParsed();
-  return !!(cryptoSubtleOk() && cfg.owner && cfg.repo && getGhToken() && getGhSyncPassphrase());
+  return !!(cryptoSubtleOk() && cfg.owner && cfg.repo && getGhToken() && getGithubCryptoPassphrase());
 }
 
 /** Remote-Schichtenliste entschlüsseln (wirft bei Netz-/Kennwortfehler). */
 async function fetchGithubSchichtenArray() {
   const cfg = getGhConfigParsed();
   if (!cfg.owner || !cfg.repo) throw new Error("Owner und Repo ausfüllen.");
-  const pass = getGhSyncPassphrase();
-  if (!pass) throw new Error("Sync-Kennwort fehlt.");
+  const pass = getGithubCryptoPassphrase();
+  if (!pass) throw new Error("Tresor entsperren (Sitzung) oder optionales Sync-Kennwort unter GitHub speichern.");
   const { envelope } = await githubFetchEncryptedEnvelope(cfg);
   const inner = await decryptGithubEncryptedFile(pass, envelope);
   return normalizeSchichtenArray(inner.schichten || []);
@@ -694,6 +816,7 @@ function queueGithubPushSerialized() {
 
 /** Lokaler Tresor erst schreiben, dann optional GitHub (ohne Verzögerung). */
 async function persistLocalThenQueueGithub() {
+  if (sessionVaultKey) vaultSessionTouch();
   if (sessionVaultKey && vaultSaltB64) {
     try {
       await persistEncrypted();
@@ -819,8 +942,8 @@ function wrapGithubSyncDecryptError(err) {
     /^(fail|unable)/i.test(msg.trim())
   ) {
     return new Error(
-      "Entschlüsseln fehlgeschlagen: Sync-Kennwort stimmt nicht mit der Datei im Repo überein " +
-        "(exakt dasselbe Kennwort wie beim „Zu GitHub hochladen“), oder die Datei wurde beschädigt."
+      "Entschlüsseln fehlgeschlagen: Kennwort passt nicht zur Datei im Repo (üblicherweise dasselbe wie der Tresor). " +
+        "Optional kann unter GitHub ein abweichendes Legacy-Sync-Kennwort gespeichert sein — oder die Datei ist beschädigt."
     );
   }
   return err instanceof Error ? err : new Error(String(err));
@@ -859,8 +982,8 @@ async function pushSchichtenToGithub(schichtenArr) {
   if (!cryptoSubtleOk()) throw new Error("Verschlüsselung nicht verfügbar (HTTPS / lokaler Server nötig).");
   const cfg = getGhConfigParsed();
   if (!cfg.owner || !cfg.repo) throw new Error("Owner und Repo ausfüllen.");
-  const pass = getGhSyncPassphrase();
-  if (!pass) throw new Error("Sync-Kennwort fehlt (einmal speichern).");
+  const pass = getGithubCryptoPassphrase();
+  if (!pass) throw new Error("Tresor entsperren oder optional unter GitHub ein Sync-Kennwort speichern.");
 
   const inner = { schichten: schichtenArr };
   const fileText = await buildGithubEncryptedFile(pass, inner);
@@ -909,8 +1032,9 @@ async function pullFromGithub() {
     if (!cryptoSubtleOk()) throw new Error("HTTPS oder lokaler Server nötig zum Entschlüsseln.");
     const cfg = getGhConfigParsed();
     if (!cfg.owner || !cfg.repo) throw new Error("Owner und Repo ausfüllen.");
-    const pass = getGhSyncPassphrase();
-    if (!pass) throw new Error("Sync-Kennwort eingeben und „Einstellungen speichern“.");
+    if (!getGithubCryptoPassphrase()) {
+      throw new Error("Tresor entsperren oder optionales Sync-Kennwort unter GitHub speichern.");
+    }
 
     const incoming = await fetchGithubSchichtenArray();
 
@@ -974,7 +1098,7 @@ function renderGithubSettings() {
   }
   if (pw) {
     pw.value = "";
-    pw.placeholder = getGhSyncPassphrase() ? "•••• gespeichert — neu zum Ändern" : "Dasselbe Kennwort überall";
+    pw.placeholder = getGhSyncPassphrase() ? "•••• Legacy gespeichert — nur bei altem Repo" : "Leer lassen = Tresor-Passwort";
   }
 }
 
@@ -988,6 +1112,11 @@ function revealVaultApp() {
 
 function lockVault() {
   if (!sessionVaultKey) return;
+  if (vaultIdleInterval) {
+    clearInterval(vaultIdleInterval);
+    vaultIdleInterval = null;
+  }
+  vaultSessionClear();
   sessionVaultKey = null;
   vaultSaltB64 = null;
   const p1 = document.getElementById("vault-pw1");
@@ -1032,6 +1161,7 @@ async function unlockVaultFromUI() {
     sessionVaultKey = await deriveVaultKey(pw, saltU8, iters);
     const inner = await decryptVaultInner(sessionVaultKey, env.iv, env.ciphertext);
     state.schichten = normalizeSchichtenArray(inner.schichten);
+    vaultSessionRemember(pw);
     removeLegacyPlaintext();
     revealVaultApp();
     const snapBeforePull = JSON.stringify(state.schichten);
@@ -1065,6 +1195,7 @@ async function setupVaultFromUI() {
   vaultSaltB64 = u8ToB64(salt);
   sessionVaultKey = await deriveVaultKey(p1, salt);
   state.schichten = initial;
+  vaultSessionRemember(p1);
   removeLegacyPlaintext();
   revealVaultApp();
   await githubStartupPullReplaceIfEnabled();
@@ -1094,16 +1225,39 @@ function initVaultGate() {
     return;
   }
 
+  if (enc && subtleOk) {
+    if (btn) btn.style.display = "none";
+    if (msg && getVaultSessionPasswordRaw() && vaultSessionActivityFresh()) {
+      msg.textContent = "Tresor-Sitzung wird wiederhergestellt …";
+    }
+    void (async () => {
+      const ok = await tryVaultAutoUnlockFromSession();
+      if (ok) {
+        removeLegacyPlaintext();
+        revealVaultApp();
+        const snapBeforePull = JSON.stringify(state.schichten);
+        await githubStartupPullReplaceIfEnabled();
+        if (JSON.stringify(state.schichten) !== snapBeforePull) {
+          showToast("Aktueller Stand von GitHub geladen ✓");
+        }
+        await persistLocalThenQueueGithub();
+        bootstrapAfterUnlock();
+        return;
+      }
+      if (btn) btn.style.display = "block";
+      if (msg) msg.textContent = "Passwort eingeben, um den Tresor zu entsperren.";
+      if (p2) p2.style.display = "none";
+      if (btn) {
+        btn.textContent = "Entsperren";
+        btn.onclick = () => unlockVaultFromUI();
+      }
+    })();
+    return;
+  }
+
   if (btn) btn.style.display = "block";
 
-  if (enc && subtleOk) {
-    if (msg) msg.textContent = "Passwort eingeben, um den Tresor zu entsperren.";
-    if (p2) p2.style.display = "none";
-    if (btn) {
-      btn.textContent = "Entsperren";
-      btn.onclick = () => unlockVaultFromUI();
-    }
-  } else if (!subtleOk) {
+  if (!subtleOk) {
     if (msg) msg.textContent = "Ohne sicheren Kontext (typisch: direkt geöffnete Datei) ist keine Verschlüsselung möglich — nur ein ungeschützter lokaler Modus.";
     if (p2) p2.style.display = "none";
     if (btn) {
@@ -1167,6 +1321,7 @@ function bootstrapAfterUnlock() {
   updateHeaderClock();
   setInterval(updateHeaderClock, 1000);
   renderGithubSettings();
+  if (sessionVaultKey) startVaultSessionMaintenance();
   render();
 }
 
